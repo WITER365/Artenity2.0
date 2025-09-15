@@ -1,0 +1,40 @@
+### iniciar FastAPI
+# pip install -r requirements.txt
+# Se creo la conexion a la base de datos para el registro 
+# con FastAPI 
+# iniciar instalar dependecias descargar y poner a funcionar la bd de nombre artenity en xamp
+# se crearon las carpetas database.py, main.py, models.py, schemas.py
+# iniciar backend FastAPI antes de iniciar el frotend (uvicorn backend.main:app --reload) 
+# iniciar frontend con npm start
+# python -m venv venv
+# source venv/Scripts/activate
+# pip install fastapi uvicorn
+# uvicorn main:app --reload
+# requirements.txt 
+# annotated-types==0.7.0
+# anyio==4.10.0
+# axios==0.4.0
+# ertifi==2025.8.3
+# charset-normalizer==3.4.3
+# click==8.2.1
+# colorama==0.4.6
+# fastapi==0.116.1
+# greenlet==3.2.4
+# h11==0.16.0
+# idna==3.10
+# lxml==6.0.1
+# markdown-it-py==4.0.0
+# mdurl==0.1.2
+# pydantic==2.11.9
+# pydantic_core==2.33.2
+# Pygments==2.19.2
+# PyMySQL==1.1.2
+# requests==2.32.5
+# rich==14.1.0
+# sniffio==1.3.1
+# SQLAlchemy==2.0.43
+# starlette==0.47.3
+# typing-inspection==0.4.1
+# typing_extensions==4.15.0
+# urllib3==2.5.0
+# uvicorn==0.35.0

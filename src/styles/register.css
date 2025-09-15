@@ -1,0 +1,235 @@
+@font-face {
+  font-family: 'KitOne';
+  src: url('../assets/fonts/KiteOne-Regular.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Adlery';
+  src: url('../assets/fonts/Adlery_TRIAL.ttf') format('truetype');
+}
+
+/* Fondo y fuente */
+.register-bg {
+  background: radial-gradient(circle at center, #200042 40%, #000000 70%);
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+.registro-container {
+  background: #4b0082;
+  padding: 25px;
+  border-radius: 75px;
+  width: 340px;
+  text-align: center;
+  box-shadow: 0 0 25px rgba(255, 140, 255, 0.5);
+  position: relative;
+  z-index: 2;
+  border: 4px solid #0e1c51;
+}
+
+.capsula-titulo {
+  position: absolute;
+  top: -75px;
+  left: 90%;
+  transform: translateX(-50%);
+  color: rgb(255, 255, 255);
+  font-size: 35px;
+  font-weight: bold;
+  font-family: 'Adlery', cursive;
+  text-align: center;
+  margin: 0;
+  text-shadow: 0 0 8px #00e0ff, 0 0 15px #7a00ff;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  right: 90px;
+  gap: 0px;
+  margin-bottom: 15px;
+  position: relative;
+}
+
+.logo {
+  width: 65px;
+  height: 65px;
+  margin-top: -25px;
+}
+
+.campo-doble {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.campo-doble input,
+.campo-triple input,
+.campo-genero,
+select,
+input[type="text"],
+input[type="password"],
+input[type="email"] {
+  width: 98%;
+  padding: 8px;
+  border: none;
+  border-radius: 20px;
+  background: #25004a;
+  color: white;
+  margin-bottom: 10px;
+  outline: none;
+}
+
+::placeholder {
+  color: #9a8fbf;
+}
+
+.campo-triple {
+  display: flex;
+  gap: 20px;
+}
+
+.campo-genero {
+  display: flex;
+  justify-content: flex-start;
+  gap: 20px;
+  margin-bottom: 10px;
+  font-size: 19px;
+  align-items: center;
+}
+
+.campo-genero input[type="radio"] {
+  width: 9px;
+  height: 9px;
+}
+
+.btn-registro {
+  display: block;
+  width: 80%;
+  margin: 16px auto;
+  padding: 12px;
+  border: none;
+  border-radius: 30px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(90deg, #8000ff, #00e0ff);
+  box-shadow: 0 0 15px rgba(0, 224, 255, 0.6), 0 0 25px rgba(128, 0, 255, 0.5);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.btn-registro:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(0, 224, 255, 1), 0 0 35px rgba(128, 0, 255, 0.8);
+}
+
+.cuenta {
+  margin-top: -10px;
+  font-size: 18px;
+}
+
+.cuenta a {
+  color: #004aad;
+  text-decoration: none;
+  transition: color 0.3s, text-shadow 0.3s;
+}
+
+.cuenta a:hover {
+  color: #7a00ff;
+  text-shadow: 0 0 8px rgba(122, 0, 255, 0.6);
+}
+
+.corner {
+  position: fixed;
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+  width: clamp(480px, 40vw, 2000px);
+  opacity: 0.95;
+}
+
+.corner-tl {
+  top: -30px;
+  left: -25px;
+}
+
+.corner-br {
+  bottom: -40px;
+  right: -30px;
+}
+
+.brush {
+  position: absolute;
+  width: 880px;
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.brush.top-left {
+  top: 125px;
+  left: -150px;
+  transform: rotate(-40deg);
+}
+
+.brush.bottom-right {
+  bottom: 100px;
+  right: -15px;
+  transform: rotate(-50deg);
+}
+
+@media (max-width: 480px) {
+  .corner { width: clamp(200px, 60vw, 420px); }
+  .registro-container { width: 90%; }
+}
+
+.registro-container label {
+  display: block;
+  text-align: left;
+  font-size: 17px;
+  font-weight: bold;
+  margin-bottom: 6px;
+  color: #fff;
+}
+
+.registro-container,
+.registro-container input,
+.registro-container select,
+.registro-container label,
+.registro-container .campo-genero,
+.registro-container .cuenta {
+  font-family: 'KitOne', sans-serif;
+}
+
+input[type="date"] {
+  font-family: Arial, sans-serif;
+  font-size: 16px;
+  padding: 8px 12px;
+  border: 2px solid #000000;   /* borde morado */
+  border-radius: 8px;
+  background-color: #610485;
+  color: #333;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+input[type="date"]:focus {
+  border-color: #ab47bc;       /* cambia color al enfocar */
+  box-shadow: 0 0 6px rgba(171, 71, 188, 0.6);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  background-color: #ab47bc;   /* icono de calendario */
+  padding: 4px;
+  border-radius: 50%;
+  cursor: pointer;
+  filter: invert(1);           /* invierte color del icono */
+}
+
+input[type="date"]::-webkit-inner-spin-button,
+input[type="date"]::-webkit-clear-button {
+  display: none;                /* oculta botones de spin y clear */
+}
