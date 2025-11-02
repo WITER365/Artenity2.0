@@ -20,7 +20,7 @@ function App() {
       {/* 🔹 Página inicial */}
       <Route path="/" element={<Artenity />} />
 
-      {/* 🔹 Rutas públicas de autenticación */}
+      {/* 🔹 Rutas públicas */}
       <Route
         path="/login"
         element={token ? <Navigate to="/principal" /> : <Login />}
@@ -29,8 +29,10 @@ function App() {
         path="/register"
         element={token ? <Navigate to="/principal" /> : <Register />}
       />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-      {/* 🔹 Rutas protegidas (solo accesibles con sesión iniciada) */}
+      {/* 🔹 Rutas protegidas */}
       <Route
         path="/principal"
         element={token ? <PaginaPrincipal /> : <Navigate to="/login" />}
@@ -51,13 +53,7 @@ function App() {
         path="/mensajes"
         element={token ? <Messages /> : <Navigate to="/login" />}
       />
-      {/* 🔹 Cualquier otra ruta redirige al login */}
       <Route path="*" element={<Navigate to="/login" />} />
-   
-      {/* Otras rutas */}
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password/:token" element={<ResetPassword />} />
-    
     </Routes>
   );
 }

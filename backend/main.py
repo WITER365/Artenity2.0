@@ -754,7 +754,7 @@ async def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get
         db.commit()
 
         # URL del frontend
-        frontend_url = f"http://localhost:5173/reset-password/{token}"
+        frontend_url = f"http://localhost:3000/reset-password/{token}"
 
         # Enviar correo con manejo de errores
         mensaje = MessageSchema(

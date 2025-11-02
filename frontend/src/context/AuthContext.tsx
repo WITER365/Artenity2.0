@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [actualizacion, setActualizacion] = useState(0);
 
-  // 🧠 Cargar datos guardados al iniciar
+  //  Cargar datos guardados al iniciar
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
     const storedUsuario = localStorage.getItem("usuario");
@@ -52,7 +52,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [actualizacion]);
 
-  // 🟢 Login
+  //  Login
   const login = (newToken: string, newUsuario: Usuario) => {
     setToken(newToken);
     setUsuario(newUsuario);
@@ -71,7 +71,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .catch((err) => console.error("Error al actualizar perfil tras login:", err));
   };
 
-  // 🔴 Logout
+  //  Logout
   const logout = () => {
     setToken(null);
     setUsuario(null);
@@ -79,7 +79,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem("usuario");
   };
 
-  // 🖼️ Actualizar foto de perfil localmente
+  //  Actualizar foto de perfil localmente
   const actualizarFotoPerfil = (nuevaFoto: string) => {
     if (usuario) {
       const fotoConTimestamp = `${nuevaFoto}?t=${new Date().getTime()}`;
@@ -90,7 +90,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // 🔄 Forzar actualización del perfil desde el backend
+  //  Forzar actualización del perfil desde el backend
   const forzarActualizacionPerfil = () => {
     if (usuario?.id_usuario && token) {
       getPerfil(usuario.id_usuario)
