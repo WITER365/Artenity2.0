@@ -123,3 +123,86 @@ conf = ConnectionConfig(
     USE_CREDENTIALS=settings.USE_CREDENTIALS,
     VALIDATE_CERTS=settings.VALIDATE_CERTS,
 )
+
+
+
+# ------------------ ME GUSTA ------------------
+class MeGustaBase(BaseModel):
+    id_publicacion: int
+
+class MeGustaResponse(BaseModel):
+    id_megusta: int
+    id_usuario: int
+    id_publicacion: int
+    fecha: datetime
+
+    class Config:
+        orm_mode = True
+
+# ------------------ GUARDADO ------------------
+class GuardadoBase(BaseModel):
+    id_publicacion: int
+
+class GuardadoResponse(BaseModel):
+    id_guardado: int
+    id_usuario: int
+    id_publicacion: int
+    fecha: datetime
+
+    class Config:
+        orm_mode = True
+
+# ------------------ COMENTARIO ------------------
+class ComentarioBase(BaseModel):
+    contenido: str
+    id_publicacion: int
+    id_comentario_padre: Optional[int] = None
+
+class ComentarioResponse(BaseModel):
+    id_comentario: int
+    id_usuario: int
+    id_publicacion: int
+    id_comentario_padre: Optional[int]
+    contenido: str
+    fecha: datetime
+    usuario: UsuarioPerfil
+    respuestas: List['ComentarioResponse'] = []
+    total_me_gusta: int = 0
+    me_gusta_dado: bool = False
+
+    class Config:
+        orm_mode = True
+
+# Para evitar problemas de referencia circular
+ComentarioResponse.update_forward_refs()
+
+class ComentarioConRespuestasResponse(BaseModel):
+    comentarios: List[ComentarioResponse]
+    total: int
+
+    class Config:
+        orm_mode = True
+
+# ------------------ ME GUSTA COMENTARIO ------------------
+class MeGustaComentarioBase(BaseModel):
+    id_comentario: int
+
+class MeGustaComentarioResponse(BaseModel):
+    id_megusta_comentario: int
+    id_usuario: int
+    id_comentario: int
+    fecha: datetime
+
+    class Config:
+        orm_mode = True
+
+# ------------------ ESTADÍSTICAS PUBLICACIÓN ------------------
+class EstadisticasPublicacionResponse(BaseModel):
+    total_me_gusta: int
+    total_comentarios: int
+    total_guardados: int
+    me_gusta_dado: bool
+    guardado: bool
+
+    class Config:
+        orm_mode = True

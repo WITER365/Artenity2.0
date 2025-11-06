@@ -1436,3 +1436,263 @@
   opacity: 0.85;
   transform: scale(1.03);
 }
+/* Estilos para las nuevas funcionalidades del perfil */
+
+/* Pestañas de navegación */
+.perfil-pestanas {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 10px;
+}
+
+.pestana {
+  background: none;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #666;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.pestana:hover {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.pestana.activa {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+/* Mejoras en las acciones de publicaciones */
+.publicacion-acciones {
+  display: flex;
+  gap: 15px;
+  padding: 12px 0;
+  border-top: 1px solid #eee;
+}
+
+.accion-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #666;
+  padding: 6px 12px;
+  border-radius: 16px;
+  transition: all 0.2s;
+}
+
+.accion-btn:hover {
+  background: #f5f5f5;
+}
+
+.accion-btn.liked {
+  color: #e74c3c;
+}
+
+.accion-btn.saved {
+  color: #f39c12;
+}
+
+/* Estados de carga */
+.cargando {
+  text-align: center;
+  padding: 50px;
+  font-size: 18px;
+  color: #666;
+}
+
+/* Mejoras responsive */
+@media (max-width: 768px) {
+  .perfil-pestanas {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .pestana {
+    text-align: center;
+    padding: 12px;
+  }
+  
+  .publicacion-acciones {
+    justify-content: space-around;
+  }
+}
+
+/* Mejoras visuales para publicaciones guardadas y likes */
+.publicacion-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.publicacion-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Indicadores visuales para diferentes pestañas */
+.publicaciones-lista .publicacion-card {
+  border-left: 4px solid transparent;
+}
+
+.publicaciones-lista .publicacion-card:nth-child(odd) {
+  border-left-color: #007bff;
+}
+
+.publicaciones-lista .publicacion-card:nth-child(even) {
+  border-left-color: #28a745;
+}
+
+/* Para publicaciones guardadas */
+.publicaciones-lista .publicacion-card.saved-indicator {
+  border-left-color: #f39c12;
+}
+
+/* Para publicaciones con like */
+.publicaciones-lista .publicacion-card.liked-indicator {
+  border-left-color: #e74c3c;
+}
+/* Agregar estos estilos al archivo perfil.css */
+
+/* Pestañas de navegación centradas */
+.perfil-pestanas {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 20px 0;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 10px;
+  width: 100%;
+}
+
+.pestana {
+  background: none;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  min-width: 120px;
+  text-align: center;
+}
+
+.pestana:hover {
+  background: #f8f9fa;
+  color: #333;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pestana.activa {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  border-color: #007bff;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Efectos de transición suave */
+.pestana {
+  position: relative;
+  overflow: hidden;
+}
+
+.pestana::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transition: left 0.5s;
+}
+
+.pestana:hover::before {
+  left: 100%;
+}
+
+/* Responsive para móviles */
+@media (max-width: 768px) {
+  .perfil-pestanas {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+  
+  .pestana {
+    min-width: 100px;
+    padding: 10px 16px;
+    font-size: 13px;
+    flex: 1;
+    max-width: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .perfil-pestanas {
+    gap: 5px;
+  }
+  
+  .pestana {
+    min-width: 80px;
+    padding: 8px 12px;
+    font-size: 12px;
+    max-width: 100px;
+  }
+}
+
+/* Asegurar que el contenedor principal esté centrado */
+.perfil-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* Opcional: Añadir un indicador visual debajo de la pestaña activa */
+.perfil-pestanas {
+  position: relative;
+}
+
+.pestana.activa::after {
+  content: '';
+  position: absolute;
+  bottom: -11px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  background: #007bff;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translateX(-50%) scale(1.2);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+}

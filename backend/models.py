@@ -4,7 +4,6 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from .database import Base
 
-
 # ------------------ USUARIO ------------------
 class Usuario(Base):
     __tablename__ = "usuarios"
@@ -34,6 +33,12 @@ class Usuario(Base):
     bloqueos_recibidos = relationship("BloqueoUsuario", foreign_keys="BloqueoUsuario.id_bloqueado", back_populates="bloqueado")
     no_me_interesa = relationship("NoMeInteresa", back_populates="usuario", cascade="all, delete-orphan")
 
+    # Nuevas relaciones
+    me_gusta = relationship("MeGusta", back_populates="usuario", cascade="all, delete-orphan")
+    guardados = relationship("Guardado", back_populates="usuario", cascade="all, delete-orphan")
+    comentarios = relationship("Comentario", back_populates="usuario", cascade="all, delete-orphan")
+    me_gusta_comentarios = relationship("MeGustaComentario", back_populates="usuario", cascade="all, delete-orphan")
+
 
 # ------------------ PERFIL ------------------
 class Perfil(Base):
@@ -60,6 +65,11 @@ class Publicacion(Base):
 
     usuario = relationship("Usuario", back_populates="publicaciones")
     no_me_interesa = relationship("NoMeInteresa", back_populates="publicacion", cascade="all, delete-orphan")
+
+    # Nuevas relaciones
+    me_gusta = relationship("MeGusta", back_populates="publicacion", cascade="all, delete-orphan")
+    guardados = relationship("Guardado", back_populates="publicacion", cascade="all, delete-orphan")
+    comentarios = relationship("Comentario", back_populates="publicacion", cascade="all, delete-orphan")
 
 
 # ------------------ SEGUIR USUARIO ------------------
@@ -158,10 +168,66 @@ class BloqueoUsuario(Base):
 class NoMeInteresa(Base):
     __tablename__ = "no_me_interesa"
 
-    id_no_me_interesa = Column(Integer, primary_key=True, index=True)  # Cambiado de 'id'
+    id_no_me_interesa = Column(Integer, primary_key=True, index=True)
     id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario", ondelete="CASCADE"))
     id_publicacion = Column(Integer, ForeignKey("publicaciones.id_publicacion", ondelete="CASCADE"))
     fecha = Column(DateTime, default=datetime.utcnow)
 
     usuario = relationship("Usuario", back_populates="no_me_interesa")
     publicacion = relationship("Publicacion", back_populates="no_me_interesa")
+
+
+# ------------------ ME GUSTA PUBLICACIÓN ------------------
+class MeGusta(Base):
+    __tablename__ = "me_gusta"
+
+    id_megusta = Column(Integer, primary_key=True, index=True)
+    id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario", ondelete="CASCADE"))
+    id_publicacion = Column(Integer, ForeignKey("publicaciones.id_publicacion", ondelete="CASCADE"))
+    fecha = Column(DateTime, default=datetime.utcnow)
+
+    usuario = relationship("Usuario", back_populates="me_gusta")
+    publicacion = relationship("Publicacion", back_populates="me_gusta")
+
+
+# ------------------ GUARDAR PUBLICACIÓN ------------------
+class Guardado(Base):
+    __tablename__ = "guardados"
+
+    id_guardado = Column(Integer, primary_key=True, index=True)
+    id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario", ondelete="CASCADE"))
+    id_publicacion = Column(Integer, ForeignKey("publicaciones.id_publicacion", ondelete="CASCADE"))
+    fecha = Column(DateTime, default=datetime.utcnow)
+
+    usuario = relationship("Usuario", back_populates="guardados")
+    publicacion = relationship("Publicacion", back_populates="guardados")
+
+
+# ------------------ COMENTARIO ------------------
+class Comentario(Base):
+    __tablename__ = "comentarios"
+
+    id_comentario = Column(Integer, primary_key=True, index=True)
+    id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario", ondelete="CASCADE"))
+    id_publicacion = Column(Integer, ForeignKey("publicaciones.id_publicacion", ondelete="CASCADE"))
+    id_comentario_padre = Column(Integer, ForeignKey("comentarios.id_comentario"), nullable=True)
+    contenido = Column(String(500), nullable=False)
+    fecha = Column(DateTime, default=datetime.utcnow)
+
+    usuario = relationship("Usuario", back_populates="comentarios")
+    publicacion = relationship("Publicacion", back_populates="comentarios")
+    comentario_padre = relationship("Comentario", remote_side=[id_comentario], backref="respuestas")
+    me_gusta_comentarios = relationship("MeGustaComentario", back_populates="comentario", cascade="all, delete-orphan")
+
+
+# ------------------ ME GUSTA COMENTARIO ------------------
+class MeGustaComentario(Base):
+    __tablename__ = "me_gusta_comentarios"
+
+    id_megusta_comentario = Column(Integer, primary_key=True, index=True)
+    id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario", ondelete="CASCADE"))
+    id_comentario = Column(Integer, ForeignKey("comentarios.id_comentario", ondelete="CASCADE"))
+    fecha = Column(DateTime, default=datetime.utcnow)
+
+    usuario = relationship("Usuario", back_populates="me_gusta_comentarios")
+    comentario = relationship("Comentario", back_populates="me_gusta_comentarios")

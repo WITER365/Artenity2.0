@@ -1099,6 +1099,437 @@ def quitar_no_me_interesa(
     db.delete(item)
     db.commit()
 
+
+# ------------------ ME GUSTA PUBLICACIÓN ------------------
+@app.post("/me-gusta/{id_publicacion}")
+def dar_me_gusta(
+    id_publicacion: int,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Dar me gusta a una publicación"""
+    # Verificar que la publicación existe
+    publicacion = db.query(models.Publicacion).filter(
+        models.Publicacion.id_publicacion == id_publicacion
+    ).first()
+    
+    if not publicacion:
+        raise HTTPException(status_code=404, detail="Publicación no encontrada")
+
+    # Verificar si ya dio me gusta
+    existente = db.query(models.MeGusta).filter(
+        models.MeGusta.id_usuario == user_id,
+        models.MeGusta.id_publicacion == id_publicacion
+    ).first()
+
+    if existente:
+        raise HTTPException(status_code=400, detail="Ya diste me gusta a esta publicación")
+
+    # Crear nuevo me gusta
+    nuevo_me_gusta = models.MeGusta(
+        id_usuario=user_id,
+        id_publicacion=id_publicacion
+    )
+    db.add(nuevo_me_gusta)
+    db.commit()
+    db.refresh(nuevo_me_gusta)
+
+    # Crear notificación si no es el propio usuario
+    if publicacion.id_usuario != user_id:
+        usuario_actual = db.query(models.Usuario).filter(models.Usuario.id_usuario == user_id).first()
+        noti = models.Notificacion(
+            id_usuario=publicacion.id_usuario,
+            tipo="me_gusta",
+            mensaje=f"A {usuario_actual.nombre_usuario} le gusta tu publicación",
+            id_referencia=id_publicacion
+        )
+        db.add(noti)
+        db.commit()
+
+    return {"mensaje": "Me gusta agregado", "id_megusta": nuevo_me_gusta.id_megusta}
+
+@app.delete("/me-gusta/{id_publicacion}")
+def quitar_me_gusta(
+    id_publicacion: int,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Quitar me gusta de una publicación"""
+    me_gusta = db.query(models.MeGusta).filter(
+        models.MeGusta.id_usuario == user_id,
+        models.MeGusta.id_publicacion == id_publicacion
+    ).first()
+
+    if not me_gusta:
+        raise HTTPException(status_code=404, detail="No has dado me gusta a esta publicación")
+
+    db.delete(me_gusta)
+    db.commit()
+
+    return {"mensaje": "Me gusta eliminado"}
+
+# ------------------ GUARDAR PUBLICACIÓN ------------------
+@app.post("/guardar/{id_publicacion}")
+def guardar_publicacion(
+    id_publicacion: int,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Guardar una publicación"""
+    # Verificar que la publicación existe
+    publicacion = db.query(models.Publicacion).filter(
+        models.Publicacion.id_publicacion == id_publicacion
+    ).first()
+    
+    if not publicacion:
+        raise HTTPException(status_code=404, detail="Publicación no encontrada")
+
+    # Verificar si ya está guardada
+    existente = db.query(models.Guardado).filter(
+        models.Guardado.id_usuario == user_id,
+        models.Guardado.id_publicacion == id_publicacion
+    ).first()
+
+    if existente:
+        raise HTTPException(status_code=400, detail="Ya tienes guardada esta publicación")
+
+    # Crear nuevo guardado
+    nuevo_guardado = models.Guardado(
+        id_usuario=user_id,
+        id_publicacion=id_publicacion
+    )
+    db.add(nuevo_guardado)
+    db.commit()
+    db.refresh(nuevo_guardado)
+
+    return {"mensaje": "Publicación guardada", "id_guardado": nuevo_guardado.id_guardado}
+
+@app.delete("/guardar/{id_publicacion}")
+def quitar_guardado(
+    id_publicacion: int,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Quitar publicación de guardados"""
+    guardado = db.query(models.Guardado).filter(
+        models.Guardado.id_usuario == user_id,
+        models.Guardado.id_publicacion == id_publicacion
+    ).first()
+
+    if not guardado:
+        raise HTTPException(status_code=404, detail="No tienes guardada esta publicación")
+
+    db.delete(guardado)
+    db.commit()
+
+    return {"mensaje": "Publicación eliminada de guardados"}
+
+# ------------------ COMENTARIOS ------------------
+@app.post("/comentarios", response_model=schemas.ComentarioResponse)
+def crear_comentario(
+    comentario: schemas.ComentarioBase,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Crear un comentario (puede ser respuesta a otro comentario)"""
+    # Verificar que la publicación existe
+    publicacion = db.query(models.Publicacion).filter(
+        models.Publicacion.id_publicacion == comentario.id_publicacion
+    ).first()
+    
+    if not publicacion:
+        raise HTTPException(status_code=404, detail="Publicación no encontrada")
+
+    # Si es respuesta, verificar que el comentario padre existe
+    if comentario.id_comentario_padre:
+        comentario_padre = db.query(models.Comentario).filter(
+            models.Comentario.id_comentario == comentario.id_comentario_padre
+        ).first()
+        if not comentario_padre:
+            raise HTTPException(status_code=404, detail="Comentario padre no encontrado")
+
+    nuevo_comentario = models.Comentario(
+        id_usuario=user_id,
+        id_publicacion=comentario.id_publicacion,
+        id_comentario_padre=comentario.id_comentario_padre,
+        contenido=comentario.contenido
+    )
+    db.add(nuevo_comentario)
+    db.commit()
+    db.refresh(nuevo_comentario)
+
+    # Crear notificación si no es el propio usuario
+    if publicacion.id_usuario != user_id:
+        usuario_actual = db.query(models.Usuario).filter(models.Usuario.id_usuario == user_id).first()
+        tipo_noti = "comentario_respuesta" if comentario.id_comentario_padre else "comentario"
+        mensaje = f"{usuario_actual.nombre_usuario} {'respondió a tu comentario' if comentario.id_comentario_padre else 'comentó tu publicación'}"
+        
+        noti = models.Notificacion(
+            id_usuario=publicacion.id_usuario,
+            tipo=tipo_noti,
+            mensaje=mensaje,
+            id_referencia=nuevo_comentario.id_comentario
+        )
+        db.add(noti)
+        db.commit()
+
+    # Cargar relaciones para la respuesta
+    db.refresh(nuevo_comentario)
+    return nuevo_comentario
+
+@app.get("/comentarios/publicacion/{id_publicacion}", response_model=schemas.ComentarioConRespuestasResponse)
+def obtener_comentarios_publicacion(
+    id_publicacion: int,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Obtener todos los comentarios de una publicación (con respuestas anidadas)"""
+    # Verificar que la publicación existe
+    publicacion = db.query(models.Publicacion).filter(
+        models.Publicacion.id_publicacion == id_publicacion
+    ).first()
+    
+    if not publicacion:
+        raise HTTPException(status_code=404, detail="Publicación no encontrada")
+
+    # Obtener comentarios principales (sin padre)
+    comentarios_principales = db.query(models.Comentario)\
+        .options(joinedload(models.Comentario.usuario).joinedload(models.Usuario.perfil))\
+        .filter(
+            models.Comentario.id_publicacion == id_publicacion,
+            models.Comentario.id_comentario_padre.is_(None)
+        )\
+        .order_by(models.Comentario.fecha.asc())\
+        .all()
+
+    def cargar_respuestas(comentario, usuario_actual_id):
+        # Cargar respuestas recursivamente
+        respuestas = db.query(models.Comentario)\
+            .options(joinedload(models.Comentario.usuario).joinedload(models.Usuario.perfil))\
+            .filter(models.Comentario.id_comentario_padre == comentario.id_comentario)\
+            .order_by(models.Comentario.fecha.asc())\
+            .all()
+        
+        resultado_respuestas = []
+        for respuesta in respuestas:
+            # Verificar si el usuario actual dio me gusta a este comentario
+            me_gusta_dado = db.query(models.MeGustaComentario).filter(
+                models.MeGustaComentario.id_usuario == usuario_actual_id,
+                models.MeGustaComentario.id_comentario == respuesta.id_comentario
+            ).first() is not None
+
+            # Contar total de me gusta
+            total_me_gusta = db.query(models.MeGustaComentario).filter(
+                models.MeGustaComentario.id_comentario == respuesta.id_comentario
+            ).count()
+
+            resultado_respuestas.append(schemas.ComentarioResponse(
+                id_comentario=respuesta.id_comentario,
+                id_usuario=respuesta.id_usuario,
+                id_publicacion=respuesta.id_publicacion,
+                id_comentario_padre=respuesta.id_comentario_padre,
+                contenido=respuesta.contenido,
+                fecha=respuesta.fecha,
+                usuario=schemas.UsuarioPerfil(
+                    id_usuario=respuesta.usuario.id_usuario,
+                    nombre=respuesta.usuario.nombre,
+                    nombre_usuario=respuesta.usuario.nombre_usuario,
+                    perfil=schemas.PerfilResponse(
+                        id_perfil=respuesta.usuario.perfil.id_perfil,
+                        id_usuario=respuesta.usuario.perfil.id_usuario,
+                        descripcion=respuesta.usuario.perfil.descripcion,
+                        biografia=respuesta.usuario.perfil.biografia,
+                        foto_perfil=respuesta.usuario.perfil.foto_perfil
+                    ) if respuesta.usuario.perfil else None
+                ),
+                respuestas=cargar_respuestas(respuesta, usuario_actual_id),
+                total_me_gusta=total_me_gusta,
+                me_gusta_dado=me_gusta_dado
+            ))
+        
+        return resultado_respuestas
+
+    # Construir respuesta con comentarios anidados
+    comentarios_con_respuestas = []
+    for comentario in comentarios_principales:
+        # Verificar si el usuario actual dio me gusta a este comentario
+        me_gusta_dado = db.query(models.MeGustaComentario).filter(
+            models.MeGustaComentario.id_usuario == user_id,
+            models.MeGustaComentario.id_comentario == comentario.id_comentario
+        ).first() is not None
+
+        # Contar total de me gusta
+        total_me_gusta = db.query(models.MeGustaComentario).filter(
+            models.MeGustaComentario.id_comentario == comentario.id_comentario
+        ).count()
+
+        comentarios_con_respuestas.append(schemas.ComentarioResponse(
+            id_comentario=comentario.id_comentario,
+            id_usuario=comentario.id_usuario,
+            id_publicacion=comentario.id_publicacion,
+            id_comentario_padre=comentario.id_comentario_padre,
+            contenido=comentario.contenido,
+            fecha=comentario.fecha,
+            usuario=schemas.UsuarioPerfil(
+                id_usuario=comentario.usuario.id_usuario,
+                nombre=comentario.usuario.nombre,
+                nombre_usuario=comentario.usuario.nombre_usuario,
+                perfil=schemas.PerfilResponse(
+                    id_perfil=comentario.usuario.perfil.id_perfil,
+                    id_usuario=comentario.usuario.perfil.id_usuario,
+                    descripcion=comentario.usuario.perfil.descripcion,
+                    biografia=comentario.usuario.perfil.biografia,
+                    foto_perfil=comentario.usuario.perfil.foto_perfil
+                ) if comentario.usuario.perfil else None
+            ),
+            respuestas=cargar_respuestas(comentario, user_id),
+            total_me_gusta=total_me_gusta,
+            me_gusta_dado=me_gusta_dado
+        ))
+
+    total_comentarios = db.query(models.Comentario).filter(
+        models.Comentario.id_publicacion == id_publicacion
+    ).count()
+
+    return schemas.ComentarioConRespuestasResponse(
+        comentarios=comentarios_con_respuestas,
+        total=total_comentarios
+    )
+
+@app.delete("/comentarios/{id_comentario}")
+def eliminar_comentario(
+    id_comentario: int,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Eliminar un comentario (y sus respuestas)"""
+    comentario = db.query(models.Comentario).filter(
+        models.Comentario.id_comentario == id_comentario
+    ).first()
+
+    if not comentario:
+        raise HTTPException(status_code=404, detail="Comentario no encontrado")
+
+    if comentario.id_usuario != user_id:
+        raise HTTPException(status_code=403, detail="No tienes permiso para eliminar este comentario")
+
+    # Eliminar comentario y sus respuestas (en cascada por la relación)
+    db.delete(comentario)
+    db.commit()
+
+    return {"mensaje": "Comentario eliminado correctamente"}
+
+# ------------------ ME GUSTA COMENTARIO ------------------
+@app.post("/me-gusta-comentario/{id_comentario}")
+def dar_me_gusta_comentario(
+    id_comentario: int,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Dar me gusta a un comentario"""
+    comentario = db.query(models.Comentario).filter(
+        models.Comentario.id_comentario == id_comentario
+    ).first()
+    
+    if not comentario:
+        raise HTTPException(status_code=404, detail="Comentario no encontrado")
+
+    existente = db.query(models.MeGustaComentario).filter(
+        models.MeGustaComentario.id_usuario == user_id,
+        models.MeGustaComentario.id_comentario == id_comentario
+    ).first()
+
+    if existente:
+        raise HTTPException(status_code=400, detail="Ya diste me gusta a este comentario")
+
+    nuevo_me_gusta = models.MeGustaComentario(
+        id_usuario=user_id,
+        id_comentario=id_comentario
+    )
+    db.add(nuevo_me_gusta)
+    db.commit()
+
+    return {"mensaje": "Me gusta agregado al comentario"}
+
+@app.delete("/me-gusta-comentario/{id_comentario}")
+def quitar_me_gusta_comentario(
+    id_comentario: int,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Quitar me gusta de un comentario"""
+    me_gusta = db.query(models.MeGustaComentario).filter(
+        models.MeGustaComentario.id_usuario == user_id,
+        models.MeGustaComentario.id_comentario == id_comentario
+    ).first()
+
+    if not me_gusta:
+        raise HTTPException(status_code=404, detail="No has dado me gusta a este comentario")
+
+    db.delete(me_gusta)
+    db.commit()
+
+    return {"mensaje": "Me gusta eliminado del comentario"}
+
+# ------------------ ESTADÍSTICAS PUBLICACIÓN ------------------
+@app.get("/publicaciones/{id_publicacion}/estadisticas", response_model=schemas.EstadisticasPublicacionResponse)
+def obtener_estadisticas_publicacion(
+    id_publicacion: int,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Obtener estadísticas de una publicación (me gusta, comentarios, guardados)"""
+    publicacion = db.query(models.Publicacion).filter(
+        models.Publicacion.id_publicacion == id_publicacion
+    ).first()
+    
+    if not publicacion:
+        raise HTTPException(status_code=404, detail="Publicación no encontrada")
+
+    total_me_gusta = db.query(models.MeGusta).filter(
+        models.MeGusta.id_publicacion == id_publicacion
+    ).count()
+
+    total_comentarios = db.query(models.Comentario).filter(
+        models.Comentario.id_publicacion == id_publicacion
+    ).count()
+
+    total_guardados = db.query(models.Guardado).filter(
+        models.Guardado.id_publicacion == id_publicacion
+    ).count()
+
+    me_gusta_dado = db.query(models.MeGusta).filter(
+        models.MeGusta.id_usuario == user_id,
+        models.MeGusta.id_publicacion == id_publicacion
+    ).first() is not None
+
+    guardado = db.query(models.Guardado).filter(
+        models.Guardado.id_usuario == user_id,
+        models.Guardado.id_publicacion == id_publicacion
+    ).first() is not None
+
+    return {
+        "total_me_gusta": total_me_gusta,
+        "total_comentarios": total_comentarios,
+        "total_guardados": total_guardados,
+        "me_gusta_dado": me_gusta_dado,
+        "guardado": guardado
+    }
+
+# ------------------ PUBLICACIONES GUARDADAS ------------------
+@app.get("/guardados", response_model=List[schemas.PublicacionResponse])
+def obtener_publicaciones_guardadas(
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Obtener publicaciones guardadas por el usuario"""
+    guardados = db.query(models.Guardado)\
+        .options(joinedload(models.Guardado.publicacion).joinedload(models.Publicacion.usuario).joinedload(models.Usuario.perfil))\
+        .filter(models.Guardado.id_usuario == user_id)\
+        .order_by(models.Guardado.fecha.desc())\
+        .all()
+
+    return [guardado.publicacion for guardado in guardados]
     return {"mensaje": "Publicación removida de 'No me interesa'"}
 # ------------------ HOME ------------------
 @app.get("/home")

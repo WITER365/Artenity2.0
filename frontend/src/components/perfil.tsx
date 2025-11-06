@@ -14,8 +14,38 @@ import {
   obtenerNoMeInteresa,
   desbloquearUsuario,
   quitarNoMeInteresa,
+  obtenerPublicacionesGuardadas,
+  obtenerEstadisticasPublicacion,
+  darMeGusta,
+  quitarMeGusta,
+  guardarPublicacion,
+  quitarGuardado,
 } from "../services/api";
 import "../styles/perfil.css";
+
+// Interfaces para los nuevos tipos de datos
+interface PublicacionConEstadisticas {
+  id_publicacion: number;
+  id_usuario: number;
+  contenido: string;
+  imagen?: string;
+  fecha_creacion: string;
+  usuario: {
+    id_usuario: number;
+    nombre_usuario: string;
+    nombre: string;
+    perfil?: {
+      foto_perfil?: string;
+    };
+  };
+  estadisticas?: {
+    total_me_gusta: number;
+    total_comentarios: number;
+    total_guardados: number;
+    me_gusta_dado: boolean;
+    guardado: boolean;
+  };
+}
 
 const Perfil: React.FC = () => {
   const { usuario, actualizarFotoPerfil, forzarActualizacionPerfil } = useAuth();
@@ -26,6 +56,7 @@ const Perfil: React.FC = () => {
   const [fotoPreview, setFotoPreview] = useState<string>("");
   const [editar, setEditar] = useState(false);
   const [cargando, setCargando] = useState(false);
+  const [pestanaActiva, setPestanaActiva] = useState<'publicaciones' | 'guardados' | 'likes'>('publicaciones');
 
   const [amigos, setAmigos] = useState<any[]>([]);
   const [seguidores, setSeguidores] = useState<any[]>([]);
@@ -37,7 +68,9 @@ const Perfil: React.FC = () => {
     siguiendo: 0,
     publicaciones: 0,
   });
-  const [publicaciones, setPublicaciones] = useState<any[]>([]);
+  const [publicaciones, setPublicaciones] = useState<PublicacionConEstadisticas[]>([]);
+  const [publicacionesGuardadas, setPublicacionesGuardadas] = useState<PublicacionConEstadisticas[]>([]);
+  const [publicacionesConLike, setPublicacionesConLike] = useState<PublicacionConEstadisticas[]>([]);
 
   // ✅ Cargar datos del perfil
   const cargarPerfil = useCallback(async () => {
@@ -67,14 +100,109 @@ const Perfil: React.FC = () => {
     }
   }, [usuario?.id_usuario]);
 
-  // ✅ Cargar publicaciones
+  // ✅ Cargar publicaciones del usuario con estadísticas
   const cargarPublicaciones = useCallback(async () => {
     if (!usuario?.id_usuario) return;
     try {
       const posts = await obtenerPublicacionesUsuario(usuario.id_usuario);
-      setPublicaciones(posts);
+      
+      // Cargar estadísticas para cada publicación
+      const postsConEstadisticas = await Promise.all(
+        posts.map(async (post: any) => {
+          try {
+            const stats = await obtenerEstadisticasPublicacion(post.id_publicacion);
+            return {
+              ...post,
+              estadisticas: stats
+            };
+          } catch (error) {
+            console.error(`Error cargando estadísticas para publicación ${post.id_publicacion}:`, error);
+            return {
+              ...post,
+              estadisticas: {
+                total_me_gusta: 0,
+                total_comentarios: 0,
+                total_guardados: 0,
+                me_gusta_dado: false,
+                guardado: false
+              }
+            };
+          }
+        })
+      );
+      
+      setPublicaciones(postsConEstadisticas);
     } catch (error) {
       console.error("Error cargando publicaciones:", error);
+    }
+  }, [usuario?.id_usuario]);
+
+  // ✅ Cargar publicaciones guardadas
+  const cargarPublicacionesGuardadas = useCallback(async () => {
+    try {
+      const posts = await obtenerPublicacionesGuardadas();
+      
+      // Cargar estadísticas para cada publicación guardada
+      const postsConEstadisticas = await Promise.all(
+        posts.map(async (post: any) => {
+          try {
+            const stats = await obtenerEstadisticasPublicacion(post.id_publicacion);
+            return {
+              ...post,
+              estadisticas: stats
+            };
+          } catch (error) {
+            console.error(`Error cargando estadísticas para publicación guardada ${post.id_publicacion}:`, error);
+            return {
+              ...post,
+              estadisticas: {
+                total_me_gusta: 0,
+                total_comentarios: 0,
+                total_guardados: 0,
+                me_gusta_dado: false,
+                guardado: true
+              }
+            };
+          }
+        })
+      );
+      
+      setPublicacionesGuardadas(postsConEstadisticas);
+    } catch (error) {
+      console.error("Error cargando publicaciones guardadas:", error);
+    }
+  }, []);
+
+  // ✅ Cargar publicaciones con like
+  const cargarPublicacionesConLike = useCallback(async () => {
+    if (!usuario?.id_usuario) return;
+    try {
+      // Para simplificar, vamos a filtrar las publicaciones que tienen like del usuario
+      // En una implementación real, necesitarías un endpoint específico para esto
+      const todasLasPublicaciones = await obtenerPublicacionesUsuario(usuario.id_usuario);
+      
+      const postsConLike = await Promise.all(
+        todasLasPublicaciones
+          .filter(async (post: any) => {
+            try {
+              const stats = await obtenerEstadisticasPublicacion(post.id_publicacion);
+              return stats.me_gusta_dado;
+            } catch (error) {
+              return false;
+            }
+          })
+          .map(async (post: any) => {
+            const stats = await obtenerEstadisticasPublicacion(post.id_publicacion);
+            return {
+              ...post,
+              estadisticas: stats
+            };
+          })
+      );
+      
+      setPublicacionesConLike(postsConLike);
+    } catch (error) {
+      console.error("Error cargando publicaciones con like:", error);
     }
   }, [usuario?.id_usuario]);
 
@@ -181,6 +309,8 @@ const Perfil: React.FC = () => {
     cargarSiguiendo();
     cargarEstadisticas();
     cargarPublicaciones();
+    cargarPublicacionesGuardadas();
+    cargarPublicacionesConLike();
     cargarUsuariosBloqueados();
     cargarNoMeInteresa();
   }, [
@@ -190,6 +320,8 @@ const Perfil: React.FC = () => {
     cargarSiguiendo,
     cargarEstadisticas,
     cargarPublicaciones,
+    cargarPublicacionesGuardadas,
+    cargarPublicacionesConLike,
     cargarUsuariosBloqueados,
     cargarNoMeInteresa,
   ]);
@@ -234,6 +366,48 @@ const Perfil: React.FC = () => {
     }
   };
 
+  // ❤️ Manejar me gusta
+  const handleMeGusta = async (publicacion: PublicacionConEstadisticas) => {
+    try {
+      if (publicacion.estadisticas?.me_gusta_dado) {
+        await quitarMeGusta(publicacion.id_publicacion);
+      } else {
+        await darMeGusta(publicacion.id_publicacion);
+      }
+      
+      // Recargar las publicaciones según la pestaña activa
+      if (pestanaActiva === 'publicaciones') {
+        await cargarPublicaciones();
+      } else if (pestanaActiva === 'guardados') {
+        await cargarPublicacionesGuardadas();
+      } else if (pestanaActiva === 'likes') {
+        await cargarPublicacionesConLike();
+      }
+    } catch (error) {
+      console.error("Error con me gusta:", error);
+    }
+  };
+
+  // 📥 Manejar guardar
+  const handleGuardar = async (publicacion: PublicacionConEstadisticas) => {
+    try {
+      if (publicacion.estadisticas?.guardado) {
+        await quitarGuardado(publicacion.id_publicacion);
+      } else {
+        await guardarPublicacion(publicacion.id_publicacion);
+      }
+      
+      // Recargar las publicaciones según la pestaña activa
+      if (pestanaActiva === 'publicaciones') {
+        await cargarPublicaciones();
+      } else if (pestanaActiva === 'guardados') {
+        await cargarPublicacionesGuardadas();
+      }
+    } catch (error) {
+      console.error("Error con guardar:", error);
+    }
+  };
+
   // 🔓 Desbloquear usuario
   const handleDesbloquearUsuario = async (idUsuario: number, nombreUsuario: string) => {
     if (!window.confirm(`¿Estás seguro de que quieres desbloquear a ${nombreUsuario}?`)) {
@@ -252,17 +426,17 @@ const Perfil: React.FC = () => {
 
   // ❌ Quitar "No me interesa"
   const handleQuitarNoMeInteresa = async (idPublicacion: number) => {
-  try {
-    await quitarNoMeInteresa(idPublicacion);
-    setNoMeInteresa(noMeInteresa.filter(item => 
-      item.publicacion.id_publicacion !== idPublicacion
-    ));
-    alert("Publicación removida de 'No me interesa'");
-  } catch (error) {
-    console.error("Error quitando 'No me interesa':", error);
-    alert("Error al remover la publicación");
-  }
-};
+    try {
+      await quitarNoMeInteresa(idPublicacion);
+      setNoMeInteresa(noMeInteresa.filter(item => 
+        item.publicacion.id_publicacion !== idPublicacion
+      ));
+      alert("Publicación removida de 'No me interesa'");
+    } catch (error) {
+      console.error("Error quitando 'No me interesa':", error);
+      alert("Error al remover la publicación");
+    }
+  };
 
   // ❌ Eliminar amigo
   const handleEliminarAmigo = async (amigo: any) => {
@@ -278,6 +452,100 @@ const Perfil: React.FC = () => {
       console.error("Error eliminando amigo:", error);
       alert("Error al eliminar amigo");
     }
+  };
+
+  // Componente para mostrar publicaciones
+  const PublicacionCard = ({ publicacion }: { publicacion: PublicacionConEstadisticas }) => (
+    <div key={publicacion.id_publicacion} className="publicacion-card">
+      <div className="publicacion-header">
+        <img
+          src={publicacion.usuario?.perfil?.foto_perfil || defaultProfile}
+          alt="Foto perfil"
+          className="publicacion-foto-perfil"
+        />
+        <div className="publicacion-info-usuario">
+          <span className="publicacion-usuario">
+            {publicacion.usuario?.nombre_usuario || "Usuario"}
+          </span>
+          <span className="publicacion-fecha">
+            {new Date(publicacion.fecha_creacion).toLocaleString()}
+          </span>
+        </div>
+      </div>
+      <div className="publicacion-contenido">
+        <p className="publicacion-texto">{publicacion.contenido}</p>
+        {publicacion.imagen && (
+          <img
+            src={publicacion.imagen}
+            alt="Publicación"
+            className="publicacion-imagen"
+          />
+        )}
+      </div>
+      <div className="publicacion-acciones">
+        <button 
+          className={`accion-btn ${publicacion.estadisticas?.me_gusta_dado ? 'liked' : ''}`}
+          onClick={() => handleMeGusta(publicacion)}
+        >
+          ❤️ {publicacion.estadisticas?.total_me_gusta || 0}
+        </button>
+        <button className="accion-btn">
+          💬 {publicacion.estadisticas?.total_comentarios || 0}
+        </button>
+        <button 
+          className={`accion-btn ${publicacion.estadisticas?.guardado ? 'saved' : ''}`}
+          onClick={() => handleGuardar(publicacion)}
+        >
+          📤
+        </button>
+      </div>
+    </div>
+  );
+
+  // Renderizar publicaciones según la pestaña activa
+  const renderPublicaciones = () => {
+    let publicacionesARenderizar: PublicacionConEstadisticas[] = [];
+    let titulo = "";
+    let mensajeVacio = "";
+
+    switch (pestanaActiva) {
+      case 'publicaciones':
+        publicacionesARenderizar = publicaciones;
+        titulo = "Mis Publicaciones";
+        mensajeVacio = "No hay publicaciones aún.\nComparte tu arte con la comunidad";
+        break;
+      case 'guardados':
+        publicacionesARenderizar = publicacionesGuardadas;
+        titulo = "Publicaciones Guardadas";
+        mensajeVacio = "No tienes publicaciones guardadas.\nGuarda publicaciones que te interesen para verlas aquí";
+        break;
+      case 'likes':
+        publicacionesARenderizar = publicacionesConLike;
+        titulo = "Publicaciones que Me Gustan";
+        mensajeVacio = "No tienes publicaciones con like.\nDale like a las publicaciones que te gusten";
+        break;
+    }
+
+    return (
+      <div className="perfil-section">
+        <div className="section-header">
+          <h3 className="section-title">{titulo}</h3>
+          <span className="section-count">{publicacionesARenderizar.length}</span>
+        </div>
+        {publicacionesARenderizar.length > 0 ? (
+          <div className="publicaciones-lista">
+            {publicacionesARenderizar.map((publicacion) => (
+              <PublicacionCard key={publicacion.id_publicacion} publicacion={publicacion} />
+            ))}
+          </div>
+        ) : (
+          <div className="sin-publicaciones">
+            <p>{mensajeVacio.split('\n')[0]}</p>
+            <p><small>{mensajeVacio.split('\n')[1]}</small></p>
+          </div>
+        )}
+      </div>
+    );
   };
 
   if (!usuario) return <div className="cargando">Cargando perfil...</div>;
@@ -308,6 +576,28 @@ const Perfil: React.FC = () => {
               <span className="estadistica-numero">{estadisticas.siguiendo}</span>
               <span className="estadistica-label">Siguiendo</span>
             </div>
+          </div>
+
+          {/* Pestañas de navegación */}
+          <div className="perfil-pestanas">
+            <button 
+              className={`pestana ${pestanaActiva === 'publicaciones' ? 'activa' : ''}`}
+              onClick={() => setPestanaActiva('publicaciones')}
+            >
+              Publicaciones
+            </button>
+            <button 
+              className={`pestana ${pestanaActiva === 'guardados' ? 'activa' : ''}`}
+              onClick={() => setPestanaActiva('guardados')}
+            >
+              Guardados
+            </button>
+            <button 
+              className={`pestana ${pestanaActiva === 'likes' ? 'activa' : ''}`}
+              onClick={() => setPestanaActiva('likes')}
+            >
+              Me Gusta
+            </button>
           </div>
 
           <button onClick={() => setEditar(!editar)} className="btn-editar">
@@ -406,56 +696,8 @@ const Perfil: React.FC = () => {
               </div>
             )}
 
-            {/* Publicaciones del Usuario */}
-            <div className="perfil-section">
-              <div className="section-header">
-                <h3 className="section-title">Mis Publicaciones</h3>
-                <span className="section-count">{publicaciones.length}</span>
-              </div>
-              {publicaciones.length > 0 ? (
-                <div className="publicaciones-lista">
-                  {publicaciones.map((post) => (
-                    <div key={post.id_publicacion} className="publicacion-card">
-                      <div className="publicacion-header">
-                        <img
-                          src={post.usuario?.perfil?.foto_perfil || defaultProfile}
-                          alt="Foto perfil"
-                          className="publicacion-foto-perfil"
-                        />
-                        <div className="publicacion-info-usuario">
-                          <span className="publicacion-usuario">
-                            {post.usuario?.nombre_usuario || "Usuario"}
-                          </span>
-                          <span className="publicacion-fecha">
-                            {new Date(post.fecha_creacion).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="publicacion-contenido">
-                        <p className="publicacion-texto">{post.contenido}</p>
-                        {post.imagen && (
-                          <img
-                            src={post.imagen}
-                            alt="Publicación"
-                            className="publicacion-imagen"
-                          />
-                        )}
-                      </div>
-                      <div className="publicacion-acciones">
-                        <button className="accion-btn">💬 Comentar</button>
-                        <button className="accion-btn">🔄 Compartir</button>
-                        <button className="accion-btn">❤️ Me gusta</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="sin-publicaciones">
-                  <p>No hay publicaciones aún.</p>
-                  <p><small>Comparte tu arte con la comunidad</small></p>
-                </div>
-              )}
-            </div>
+            {/* Publicaciones según pestaña activa */}
+            {renderPublicaciones()}
 
             {/* Usuarios Bloqueados */}
             <div className="perfil-section">

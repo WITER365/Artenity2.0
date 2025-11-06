@@ -10,22 +10,29 @@ const api = axios.create({
 });
 
 // ======== UTIL ========
-function getToken() {
+function getToken(): string {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No hay token de sesión");
   return token;
 }
 
-function getUsuarioId() {
+function getUsuarioId(): number {
   const usuario = localStorage.getItem("usuario");
   if (!usuario) throw new Error("No hay usuario autenticado");
   const parsed = JSON.parse(usuario);
   return parsed.id_usuario;
 }
 
+function getAuthHeaders() {
+  return {
+    token: getToken(),
+    id_usuario: getUsuarioId().toString(),
+  };
+}
+
 // ======== USUARIOS ========
 export async function getUsuarios(): Promise<Usuario[]> {
-  const res = await api.get("/usuarios", { headers: { token: getToken() } });
+  const res = await api.get("/usuarios", { headers: getAuthHeaders() });
   return res.data;
 }
 
@@ -60,17 +67,17 @@ export function logoutUsuario() {
 // ======== PERFILES ========
 export async function getPerfil(id_usuario: number) {
   const res = await api.get(`/perfiles/${id_usuario}`, {
-    headers: {
-      token: getToken(),
-      id_usuario: getUsuarioId(),
-    },
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
 
 export async function actualizarPerfil(id_usuario: number, data: FormData) {
   const res = await api.put(`/perfiles/${id_usuario}`, data, {
-    headers: { token: getToken(), "Content-Type": "multipart/form-data" },
+    headers: { 
+      ...getAuthHeaders(),
+      "Content-Type": "multipart/form-data" 
+    },
   });
   return res.data;
 }
@@ -78,18 +85,31 @@ export async function actualizarPerfil(id_usuario: number, data: FormData) {
 // ======== PUBLICACIONES ========
 export async function crearPublicacion(data: FormData) {
   const res = await api.post("/publicaciones", data, {
-    headers: { token: getToken(), "Content-Type": "multipart/form-data" },
+    headers: { 
+      ...getAuthHeaders(),
+      "Content-Type": "multipart/form-data" 
+    },
   });
   return res.data;
 }
 
-// 🔹 Versión fusionada y segura de getPublicaciones()
 export async function getPublicaciones() {
-  const token = getToken();
-  const id_usuario = getUsuarioId();
-
   const res = await api.get("/publicaciones", {
-    headers: { token, id_usuario },
+    headers: getAuthHeaders(),
+  });
+  return res.data;
+}
+
+export async function eliminarPublicacion(id_publicacion: number) {
+  const res = await api.delete(`/publicaciones/${id_publicacion}`, {
+    headers: getAuthHeaders(),
+  });
+  return res.data;
+}
+
+export async function obtenerPublicacionesUsuario(id_usuario: number) {
+  const res = await api.get(`/publicaciones-usuario/${id_usuario}`, {
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
@@ -97,21 +117,42 @@ export async function getPublicaciones() {
 // ======== RELACIONES SOCIALES ========
 export async function seguirUsuario(id_seguido: number) {
   const res = await api.post(`/seguir/${id_seguido}`, null, {
-    headers: { token: getToken(), id_usuario: getUsuarioId() },
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
 
 export async function dejarDeSeguirUsuario(id_seguido: number) {
   const res = await api.delete(`/dejar-seguir/${id_seguido}`, {
-    headers: { token: getToken(), id_usuario: getUsuarioId() },
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
 
 export async function obtenerSeguidores() {
   const res = await api.get("/seguidores", {
-    headers: { token: getToken(), id_usuario: getUsuarioId() },
+    headers: getAuthHeaders(),
+  });
+  return res.data;
+}
+
+export async function obtenerSeguidoresUsuario(id_usuario: number) {
+  const res = await api.get(`/seguidores/${id_usuario}`, {
+    headers: getAuthHeaders(),
+  });
+  return res.data;
+}
+
+export async function obtenerSiguiendo() {
+  const res = await api.get("/siguiendo", {
+    headers: getAuthHeaders(),
+  });
+  return res.data;
+}
+
+export async function obtenerSiguiendoUsuario(id_usuario: number) {
+  const res = await api.get(`/siguiendo/${id_usuario}`, {
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
@@ -119,7 +160,7 @@ export async function obtenerSeguidores() {
 // ======== AMISTADES ========
 export async function enviarSolicitudAmistad(id_receptor: number) {
   const res = await api.post(`/amistad/${id_receptor}`, null, {
-    headers: { token: getToken(), id_usuario: getUsuarioId() },
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
@@ -130,8 +171,7 @@ export async function responderSolicitudAmistad(id_solicitud: number, estado: st
 
   const res = await api.put(`/amistad/${id_solicitud}`, formData, {
     headers: {
-      token: getToken(),
-      id_usuario: getUsuarioId(),
+      ...getAuthHeaders(),
       "Content-Type": "multipart/form-data",
     },
   });
@@ -140,7 +180,7 @@ export async function responderSolicitudAmistad(id_solicitud: number, estado: st
 
 export async function obtenerSolicitudesPendientes() {
   const res = await api.get("/solicitudes-amistad", {
-    headers: { token: getToken(), id_usuario: getUsuarioId() },
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
@@ -148,30 +188,22 @@ export async function obtenerSolicitudesPendientes() {
 export async function obtenerAmigos(id_usuario?: number) {
   const url = id_usuario ? `/amigos?id_usuario=${id_usuario}` : "/amigos";
   const res = await api.get(url, {
-    headers: { token: getToken(), id_usuario: getUsuarioId() },
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
 
-// ======== ELIMINAR AMIGO ========
-export const eliminarAmigo = async (id_amigo: number) => {
-  try {
-    const token = getToken();
-    const id_usuario = getUsuarioId();
-    const response = await axios.delete(`${API_URL}/amigos/${id_amigo}`, {
-      headers: { token, id_usuario },
-    });
-    return response.data;
-  } catch (error: any) {
-    console.error("Error eliminando amigo:", error);
-    throw error.response?.data || { detail: "Error al eliminar amigo" };
-  }
-};
+export async function eliminarAmigo(id_amigo: number) {
+  const res = await api.delete(`/amigos/${id_amigo}`, {
+    headers: getAuthHeaders(),
+  });
+  return res.data;
+}
 
 // ======== NOTIFICACIONES ========
 export async function getNotificaciones() {
   const res = await api.get("/notificaciones", {
-    headers: { token: getToken(), id_usuario: getUsuarioId() },
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
@@ -180,7 +212,7 @@ export async function marcarNotificacionesLeidas() {
   const res = await api.put(
     "/notificaciones/leidas",
     {},
-    { headers: { token: getToken(), id_usuario: getUsuarioId() } }
+    { headers: getAuthHeaders() }
   );
   return res.data;
 }
@@ -193,8 +225,7 @@ export async function reportarUsuario(id_reportado: number, motivo: string, evid
 
   const res = await api.post(`/reportar/${id_reportado}`, formData, {
     headers: {
-      token: getToken(),
-      id_usuario: getUsuarioId(),
+      ...getAuthHeaders(),
       "Content-Type": "multipart/form-data",
     },
   });
@@ -208,42 +239,10 @@ export async function obtenerCategorias() {
   return res.data;
 }
 
-export const getSolicitudesAmistad = obtenerSolicitudesPendientes;
-export const getAmigos = obtenerAmigos;
-export const getCategorias = obtenerCategorias;
-
-// ======== SEGUIDORES Y SIGUIENDO ========
-export async function obtenerSiguiendo() {
-  const res = await api.get("/siguiendo", {
-    headers: { token: getToken(), id_usuario: getUsuarioId() },
-  });
-  return res.data;
-}
-
+// ======== ESTADÍSTICAS ========
 export async function obtenerEstadisticasPerfil(id_usuario: number) {
   const res = await api.get(`/estadisticas-perfil/${id_usuario}`, {
-    headers: { token: getToken() },
-  });
-  return res.data;
-}
-
-export async function obtenerPublicacionesUsuario(id_usuario: number) {
-  const res = await api.get(`/publicaciones-usuario/${id_usuario}`, {
-    headers: { token: getToken() },
-  });
-  return res.data;
-}
-
-export async function obtenerSeguidoresUsuario(id_usuario: number) {
-  const res = await api.get(`/seguidores/${id_usuario}`, {
-    headers: { token: getToken(), id_usuario: getUsuarioId() },
-  });
-  return res.data;
-}
-
-export async function obtenerSiguiendoUsuario(id_usuario: number) {
-  const res = await api.get(`/siguiendo/${id_usuario}`, {
-    headers: { token: getToken(), id_usuario: getUsuarioId() },
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
@@ -262,50 +261,139 @@ export async function restablecerContrasena(token: string, nueva_contrasena: str
 // ======== BLOQUEAR / DESBLOQUEAR USUARIO ========
 export async function bloquearUsuario(id_usuario_bloqueado: number) {
   const res = await api.post(`/bloquear/${id_usuario_bloqueado}`, null, {
-    headers: { token: getToken(), id_usuario: getUsuarioId() },
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
 
 export async function desbloquearUsuario(id_usuario_bloqueado: number) {
   const res = await api.delete(`/desbloquear/${id_usuario_bloqueado}`, {
-    headers: { token: getToken(), id_usuario: getUsuarioId() },
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
 
 export async function obtenerUsuariosBloqueados() {
   const res = await api.get("/usuarios-bloqueados", {
-    headers: { token: getToken(), id_usuario: getUsuarioId() },
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
 
-// ======== PUBLICACIONES: ACCIONES ========
-export async function eliminarPublicacion(id_publicacion: number) {
-  const res = await api.delete(`/publicaciones/${id_publicacion}`, {
-    headers: { token: getToken(), id_usuario: getUsuarioId() },
-  });
-  return res.data;
-}
-
+// ======== NO ME INTERESA ========
 export async function noMeInteresa(id_publicacion: number) {
   const res = await api.post(`/no-me-interesa/${id_publicacion}`, null, {
-    headers: { token: getToken(), id_usuario: getUsuarioId() },
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
 
 export async function obtenerNoMeInteresa() {
   const res = await api.get("/no-me-interesa", {
-    headers: { token: getToken(), id_usuario: getUsuarioId() },
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
 
 export async function quitarNoMeInteresa(id_publicacion: number) {
   const res = await api.delete(`/quitar-no-me-interesa/${id_publicacion}`, {
-    headers: { token: getToken(), id_usuario: getUsuarioId() },
+    headers: getAuthHeaders(),
   });
   return res.data;
 }
+
+// ======== NUEVAS FUNCIONALIDADES: REACCIONES, COMENTARIOS Y GUARDADOS ========
+
+// Me gusta publicaciones
+export async function darMeGusta(idPublicacion: number) {
+  const res = await api.post(`/me-gusta/${idPublicacion}`, null, {
+    headers: getAuthHeaders(),
+  });
+  return res.data;
+}
+
+export async function quitarMeGusta(idPublicacion: number) {
+  const res = await api.delete(`/me-gusta/${idPublicacion}`, {
+    headers: getAuthHeaders(),
+  });
+  return res.data;
+}
+
+// Guardar publicaciones
+export async function guardarPublicacion(idPublicacion: number) {
+  const res = await api.post(`/guardar/${idPublicacion}`, null, {
+    headers: getAuthHeaders(),
+  });
+  return res.data;
+}
+
+export async function quitarGuardado(idPublicacion: number) {
+  const res = await api.delete(`/guardar/${idPublicacion}`, {
+    headers: getAuthHeaders(),
+  });
+  return res.data;
+}
+
+// Comentarios
+export interface ComentarioData {
+  contenido: string;
+  id_publicacion: number;
+  id_comentario_padre?: number | null;
+}
+
+export async function crearComentario(comentarioData: ComentarioData) {
+  const res = await api.post("/comentarios", comentarioData, {
+    headers: getAuthHeaders(),
+  });
+  return res.data;
+}
+
+export async function obtenerComentarios(idPublicacion: number) {
+  const res = await api.get(`/comentarios/publicacion/${idPublicacion}`, {
+    headers: getAuthHeaders(),
+  });
+  return res.data;
+}
+
+export async function eliminarComentario(idComentario: number) {
+  const res = await api.delete(`/comentarios/${idComentario}`, {
+    headers: getAuthHeaders(),
+  });
+  return res.data;
+}
+
+// Me gusta comentarios
+export async function darMeGustaComentario(idComentario: number) {
+  const res = await api.post(`/me-gusta-comentario/${idComentario}`, null, {
+    headers: getAuthHeaders(),
+  });
+  return res.data;
+}
+
+export async function quitarMeGustaComentario(idComentario: number) {
+  const res = await api.delete(`/me-gusta-comentario/${idComentario}`, {
+    headers: getAuthHeaders(),
+  });
+  return res.data;
+}
+
+// Estadísticas de publicación
+export async function obtenerEstadisticasPublicacion(idPublicacion: number) {
+  const res = await api.get(`/publicaciones/${idPublicacion}/estadisticas`, {
+    headers: getAuthHeaders(),
+  });
+  return res.data;
+}
+
+// Publicaciones guardadas
+export async function obtenerPublicacionesGuardadas() {
+  const res = await api.get("/guardados", {
+    headers: getAuthHeaders(),
+  });
+  return res.data;
+}
+
+// ======== ALIASES PARA COMPATIBILIDAD ========
+export const getSolicitudesAmistad = obtenerSolicitudesPendientes;
+export const getAmigos = obtenerAmigos;
+export const getCategorias = obtenerCategorias;
