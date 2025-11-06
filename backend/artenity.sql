@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 06-11-2025 a las 02:33:39
+-- Tiempo de generación: 06-11-2025 a las 20:55:05
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -40,7 +40,7 @@ CREATE TABLE `amistades` (
 
 INSERT INTO `amistades` (`id_amistad`, `id_usuario1`, `id_usuario2`, `estado`) VALUES
 (2, 1, 58, 'aceptada'),
-(5, 56, 58, 'aceptada');
+(6, 57, 56, 'aceptada');
 
 -- --------------------------------------------------------
 
@@ -60,7 +60,7 @@ CREATE TABLE `bloqueos_usuarios` (
 --
 
 INSERT INTO `bloqueos_usuarios` (`id_bloqueo`, `id_bloqueador`, `id_bloqueado`, `fecha_bloqueo`) VALUES
-(4, 57, 58, '2025-11-06 01:27:07');
+(14, 56, 58, '2025-11-06 19:47:30');
 
 -- --------------------------------------------------------
 
@@ -681,7 +681,10 @@ INSERT INTO `notificaciones` (`id_notificacion`, `id_usuario`, `mensaje`, `leido
 (57, 58, 'and te ha enviado una solicitud de amistad', 1, '2025-11-06 01:20:58', 'solicitud_amistad', 20),
 (58, 58, 'and comenzó a seguirte', 1, '2025-11-06 01:21:02', 'nuevo_seguidor', 26),
 (59, 58, 'and comenzó a seguirte', 1, '2025-11-06 01:22:44', 'nuevo_seguidor', 27),
-(60, 56, 'laurapintora aceptó tu solicitud de amistad', 1, '2025-11-06 01:23:20', 'amistad_aceptada', 20);
+(60, 56, 'laurapintora aceptó tu solicitud de amistad', 1, '2025-11-06 01:23:20', 'amistad_aceptada', 20),
+(61, 56, 'witer365 te ha enviado una solicitud de amistad', 1, '2025-11-06 19:51:51', 'solicitud_amistad', 21),
+(62, 56, 'witer365 comenzó a seguirte', 1, '2025-11-06 19:52:00', 'nuevo_seguidor', 28),
+(63, 57, 'and aceptó tu solicitud de amistad', 0, '2025-11-06 19:53:03', 'amistad_aceptada', 21);
 
 -- --------------------------------------------------------
 
@@ -695,6 +698,13 @@ CREATE TABLE `no_me_interesa` (
   `id_publicacion` int(11) DEFAULT NULL,
   `fecha` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Volcado de datos para la tabla `no_me_interesa`
+--
+
+INSERT INTO `no_me_interesa` (`id_no_me_interesa`, `id_usuario`, `id_publicacion`, `fecha`) VALUES
+(12, 56, 21, '2025-11-06 19:49:17');
 
 -- --------------------------------------------------------
 
@@ -852,10 +862,6 @@ INSERT INTO `publicaciones` (`id_publicacion`, `id_usuario`, `contenido`, `image
 (5, 51, 'hola si', 'http://localhost:8000/static/posts\\51_ARTIVERSE.drawio.png', '2025-10-05 20:16:42'),
 (6, 49, 'HOLA COMO ESTAN EPERO QUE BIEN ', 'http://localhost:8000/static/posts\\49_8d3bec423a4c16808c32fdb6f28a44e8.jpg', '2025-10-05 20:59:16'),
 (7, 56, 'bgbgbgb', 'http://localhost:8000/static/posts\\56_Gráfico de Línea de Tiempo Profesional Moderno Multicolor.png', '2025-10-06 21:48:48'),
-(8, 57, 'bbgbgb', 'http://localhost:8000/static/posts\\57_1.jpg', '2025-10-06 21:55:19'),
-(9, 57, 'njnjnj', 'http://localhost:8000/static/posts\\57_1.jpg', '2025-10-06 23:44:26'),
-(10, 57, 'bbhbh', 'http://localhost:8000/static/posts\\57_1.jpg', '2025-10-07 02:45:59'),
-(11, 57, ' cccc', 'http://localhost:8000/static/posts\\57_1.jpg', '2025-10-09 16:06:45'),
 (12, 24, 'hola ', 'http://localhost:8000/static/posts/24_Captura de pantalla 2025-10-10 183230.png', '2025-10-11 19:55:53'),
 (13, 22, 'ya casi', 'http://localhost:8000/static/posts/22_Gráfico de Línea de Tiempo Profesional Moderno Multicolor.png', '2025-10-11 20:05:30'),
 (14, 57, 'ya casi se logra', 'http://localhost:8000/static/posts/57_3.jpg', '2025-10-11 20:06:46'),
@@ -863,7 +869,8 @@ INSERT INTO `publicaciones` (`id_publicacion`, `id_usuario`, `contenido`, `image
 (16, 56, 'vhgghg', 'http://localhost:8000/static/posts/56_3.jpg', '2025-10-11 23:10:03'),
 (18, 58, 'Primera publicación de prueba desde Artenity', 'http://localhost:8000/static/posts/58_4.avif', '2025-10-24 13:59:55'),
 (21, 55, 'hola ahí esperanza', NULL, '2025-10-26 22:14:46'),
-(22, 58, 'AHI HAMBRE GENTE ', NULL, '2025-11-01 22:38:01');
+(22, 58, 'AHI HAMBRE GENTE ', NULL, '2025-11-01 22:38:01'),
+(25, 56, 'dcdcdc', NULL, '2025-11-06 19:46:15');
 
 -- --------------------------------------------------------
 
@@ -940,7 +947,8 @@ INSERT INTO `reportes_usuarios` (`id_reporte`, `id_reportante`, `id_reportado`, 
 (4, 57, 55, '🚫 Contenido ofensivo o inapropiado (violencia, odio, lenguaje vulgar)', 'http://localhost:8000/static/reportes/reporte_57_55_1761596595.jpg', '2025-10-27 15:23:15'),
 (5, 57, 55, '🖼️ Plagio o uso no autorizado de obras', 'http://localhost:8000/static/reportes/reporte_57_55_1761600922.jpg', '2025-10-27 16:35:22'),
 (6, 57, 58, '🔞 Contenido obsceno o inapropiado', 'http://localhost:8000/static/reportes/reporte_57_58_1762036616.jpg', '2025-11-01 17:36:56'),
-(7, 56, 58, 'xsxsxsxsx', 'http://localhost:8000/static/reportes/reporte_56_58_1762389172.jpg', '2025-11-05 19:32:52');
+(7, 56, 58, 'xsxsxsxsx', 'http://localhost:8000/static/reportes/reporte_56_58_1762389172.jpg', '2025-11-05 19:32:52'),
+(8, 57, 56, '🎭 Suplantación de identidad', NULL, '2025-11-06 14:52:17');
 
 -- --------------------------------------------------------
 
@@ -983,14 +991,12 @@ CREATE TABLE `seguir_usuario` (
 INSERT INTO `seguir_usuario` (`id_seguimiento`, `id_seguidor`, `id_seguido`, `fecha_seguimiento`) VALUES
 (5, 56, 57, '2025-10-12 22:08:08'),
 (6, 1, 57, '2025-10-12 23:20:59'),
-(7, 56, 22, '2025-10-24 12:08:58'),
 (8, 1, 56, '2025-10-24 12:13:00'),
-(15, 57, 56, '2025-10-24 17:54:01'),
 (17, 58, 22, '2025-10-24 18:37:04'),
 (20, 55, 57, '2025-10-26 22:16:21'),
 (21, 57, 55, '2025-10-26 23:11:29'),
 (22, 57, 49, '2025-10-27 18:40:39'),
-(27, 56, 58, '2025-11-06 01:22:44');
+(28, 57, 56, '2025-11-06 19:52:00');
 
 -- --------------------------------------------------------
 
@@ -1274,25 +1280,25 @@ ALTER TABLE `usuarios`
 -- AUTO_INCREMENT de la tabla `amistades`
 --
 ALTER TABLE `amistades`
-  MODIFY `id_amistad` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id_amistad` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT de la tabla `bloqueos_usuarios`
 --
 ALTER TABLE `bloqueos_usuarios`
-  MODIFY `id_bloqueo` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id_bloqueo` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT de la tabla `notificaciones`
 --
 ALTER TABLE `notificaciones`
-  MODIFY `id_notificacion` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=61;
+  MODIFY `id_notificacion` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=64;
 
 --
 -- AUTO_INCREMENT de la tabla `no_me_interesa`
 --
 ALTER TABLE `no_me_interesa`
-  MODIFY `id_no_me_interesa` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id_no_me_interesa` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT de la tabla `perfiles`
@@ -1304,13 +1310,13 @@ ALTER TABLE `perfiles`
 -- AUTO_INCREMENT de la tabla `publicaciones`
 --
 ALTER TABLE `publicaciones`
-  MODIFY `id_publicacion` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `id_publicacion` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
 -- AUTO_INCREMENT de la tabla `reportes_usuarios`
 --
 ALTER TABLE `reportes_usuarios`
-  MODIFY `id_reporte` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id_reporte` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT de la tabla `reset_password_tokens`
@@ -1322,13 +1328,13 @@ ALTER TABLE `reset_password_tokens`
 -- AUTO_INCREMENT de la tabla `seguir_usuario`
 --
 ALTER TABLE `seguir_usuario`
-  MODIFY `id_seguimiento` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
+  MODIFY `id_seguimiento` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
 
 --
 -- AUTO_INCREMENT de la tabla `solicitud_de_amistad`
 --
 ALTER TABLE `solicitud_de_amistad`
-  MODIFY `id_solicitud` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id_solicitud` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT de la tabla `usuarios`
