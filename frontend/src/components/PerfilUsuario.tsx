@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getPerfil, 
-   seguirUsuario, 
-   enviarSolicitudAmistad, 
-   dejarDeSeguirUsuario, 
-   reportarUsuario, 
-   getAmigos, 
-   obtenerEstadisticasPerfil, 
-   obtenerPublicacionesUsuario,
-   obtenerSeguidoresUsuario,
-   obtenerSiguiendoUsuario,
-   } 
-from "../services/api";
+import { 
+  getPerfil, 
+  seguirUsuario, 
+  enviarSolicitudAmistad, 
+  dejarDeSeguirUsuario, 
+  reportarUsuario, 
+  getAmigos, 
+  obtenerEstadisticasPerfil, 
+  obtenerPublicacionesUsuario,
+  obtenerSeguidoresUsuario,
+  obtenerSiguiendoUsuario,
+} from "../services/api";
 import defaultProfile from "../assets/img/fotoperfildefault.jpg";
 import { useAuth } from "../context/AuthContext";
 import "../styles/perfil.css";
@@ -153,30 +153,57 @@ export default function PerfilUsuario() {
       setReporteModal(false);
       setMotivoReporte("");
       setEvidencia(null);
+      setPreview(null);
     } catch (error: any) {
       alert(error.response?.data?.detail || "Error al reportar usuario");
     }
+  };
+
+  // Manejar la selección de archivo
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setEvidencia(file);
+    
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setPreview(null);
+    }
+  };
+
+  // Remover imagen
+  const handleRemoveImage = () => {
+    setEvidencia(null);
+    setPreview(null);
   };
 
   if (cargando) return <div className="cargando">Cargando perfil...</div>;
   if (!perfil) return <div className="error">Usuario no encontrado</div>;
 
   return (
-    <div className="perfil-usuario-container">
-      {/* Header del perfil */}
-      <div className="perfil-header">
-        <div className="foto-perfil-section">
-          <img src={perfil.foto_perfil || defaultProfile} alt="Foto de perfil" className="foto-perfil-grande" />
-        </div>
-        <div className="info-perfil">
-          <h1>{perfil.usuario?.nombre_usuario || "Usuario"}</h1>
-          <p className="nombre-completo">
-            {perfil.usuario?.nombre} {perfil.usuario?.apellido}
-          </p>
-          {perfil.descripcion && <p className="descripcion">{perfil.descripcion}</p>}
-          
+    <div className="perfil-container">
+      {/* ===== COLUMNA PRINCIPAL ===== */}
+      <div className="perfil-main">
+        {/* Header del Perfil */}
+        <div className="perfil-header">
+          <div className="perfil-avatar">
+            <img
+              src={perfil.foto_perfil || defaultProfile}
+              alt="Foto de perfil"
+              className="perfil-foto"
+            />
+          </div>
+          <h1 className="perfil-nombre">
+            {perfil.usuario?.nombre_usuario || "Usuario"}
+          </h1>
+          <p className="perfil-correo">{perfil.usuario?.correo_electronico}</p>
+
           {/* Estadísticas */}
-          <div className="estadisticas">
+          <div className="estadisticas-perfil">
             <div className="estadistica-item">
               <span className="estadistica-numero">{estadisticas.publicaciones}</span>
               <span className="estadistica-label">Publicaciones</span>
@@ -190,8 +217,8 @@ export default function PerfilUsuario() {
               <span className="estadistica-label">Siguiendo</span>
             </div>
           </div>
-          
-          {/* Botones */}
+
+          {/* Botones de Acción */}
           {!esMiPerfil && (
             <div className="acciones-perfil">
               {perfil.sigo ? (
@@ -203,121 +230,198 @@ export default function PerfilUsuario() {
                   👣 Seguir
                 </button>
               )}
-              <button onClick={handleSolicitudAmistad} className="btn-amistad" disabled={esAmigo}>
+              
+              <button 
+                onClick={handleSolicitudAmistad} 
+                className="btn-amistad" 
+                disabled={esAmigo}
+              >
                 🤝 {esAmigo ? "Ya son amigos" : "Enviar solicitud"}
               </button>
+              
               <button onClick={() => setReporteModal(true)} className="btn-reportar">
                 ⚠️ Reportar
               </button>
             </div>
           )}
         </div>
-      </div>
 
-      {/* Biografía */}
-      {perfil.biografia && (
-        <div className="biografia-section">
-          <h3>Biografía</h3>
-          <p>{perfil.biografia}</p>
-        </div>
-      )}
-
-      {/* Publicaciones */}
-      <div className="publicaciones-section">
-        <h3>Publicaciones ({publicaciones.length})</h3>
-        {publicaciones.length > 0 ? (
-          <div className="publicaciones-lista">
-            {publicaciones.map((post) => (
-              <div key={post.id_publicacion} className="publicacion-card">
-                <div className="publicacion-header">
-                  <img src={post.usuario?.perfil?.foto_perfil || defaultProfile} alt="Foto perfil" className="publicacion-foto-perfil" />
-                  <div className="publicacion-info-usuario">
-                    <span className="publicacion-usuario">
-                      {post.usuario?.nombre_usuario || "Usuario"}
-                    </span>
-                    <span className="publicacion-fecha">
-                      {new Date(post.fecha_creacion).toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-                <div className="publicacion-contenido">
-                  <p className="publicacion-texto">{post.contenido}</p>
-                  {post.imagen && (
-                    <img src={post.imagen} alt="Publicación" className="publicacion-imagen" />
-                  )}
-                </div>
-                <div className="publicacion-acciones">
-                  <button className="accion-btn">💬 Comentar</button>
-                  <button className="accion-btn">🔄 Compartir</button>
-                  <button className="accion-btn">❤️ Me gusta</button>
-                </div>
+        {/* Información del Perfil */}
+        {(perfil.descripcion || perfil.biografia) && (
+          <div className="perfil-section">
+            <div className="section-header">
+              <h3 className="section-title">Sobre {perfil.usuario?.nombre_usuario}</h3>
+            </div>
+            {perfil.descripcion && (
+              <div className="form-group">
+                <label className="form-label">Descripción</label>
+                <p className="publicacion-texto">{perfil.descripcion}</p>
               </div>
-            ))}
+            )}
+            {perfil.biografia && (
+              <div className="form-group">
+                <label className="form-label">Biografía</label>
+                <p className="publicacion-texto">{perfil.biografia}</p>
+              </div>
+            )}
           </div>
-        ) : (
-          <p className="sin-publicaciones">Este usuario no tiene publicaciones aún.</p>
         )}
+
+        {/* Publicaciones del Usuario */}
+        <div className="perfil-section">
+          <div className="section-header">
+            <h3 className="section-title">
+              Publicaciones <span className="section-count">{publicaciones.length}</span>
+            </h3>
+          </div>
+          
+          {publicaciones.length > 0 ? (
+            <div className="publicaciones-lista">
+              {publicaciones.map((post) => (
+                <div key={post.id_publicacion} className="publicacion-card">
+                  <div className="publicacion-header">
+                    <img
+                      src={post.usuario?.perfil?.foto_perfil || defaultProfile}
+                      alt="Foto perfil"
+                      className="publicacion-foto-perfil"
+                    />
+                    <div className="publicacion-info-usuario">
+                      <span className="publicacion-usuario">
+                        {post.usuario?.nombre_usuario || "Usuario"}
+                      </span>
+                      <span className="publicacion-fecha">
+                        {new Date(post.fecha_creacion).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="publicacion-contenido">
+                    <p className="publicacion-texto">{post.contenido}</p>
+                    {post.imagen && (
+                      <img
+                        src={post.imagen}
+                        alt="Publicación"
+                        className="publicacion-imagen"
+                      />
+                    )}
+                  </div>
+                  <div className="publicacion-acciones">
+                    <button className="accion-btn">💬 Comentar</button>
+                    <button className="accion-btn">🔄 Compartir</button>
+                    <button className="accion-btn">❤️ Me gusta</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="sin-publicaciones">
+              <p>Este usuario no tiene publicaciones aún.</p>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Amigos */}
-      {amigos.length > 0 && (
-        <div className="amigos-section">
-          <h3>Amigos ({amigos.length})</h3>
-          <div className="lista-amigos">
-            {amigos.map((amigo) => (
-              <div key={amigo.id_usuario} className="amigo-item">
-                <img src={amigo.foto_perfil || defaultProfile} alt={amigo.nombre_usuario} className="foto-amigo" />
-                <span>{amigo.nombre_usuario}</span>
-              </div>
-            ))}
+      {/* ===== SIDEBAR ===== */}
+      <div className="perfil-sidebar">
+        {/* Amigos */}
+        <div className="sidebar-section">
+          <div className="sidebar-title">
+            Amigos <span className="sidebar-count">{amigos.length}</span>
           </div>
+          {amigos.length > 0 ? (
+            <div className="usuarios-lista">
+              {amigos.map((amigo) => (
+                <div key={amigo.id_usuario} className="usuario-item">
+                  <img
+                    src={amigo.foto_perfil || defaultProfile}
+                    alt={`Foto de ${amigo.nombre_usuario}`}
+                    className="usuario-foto"
+                  />
+                  <div className="usuario-info">
+                    <span className="usuario-nombre">{amigo.nombre_usuario}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="sin-contenido">Aún no tiene amigos</p>
+          )}
         </div>
-      )}
 
-      {/* 🔹 Seguidores y Siguiendo */}
-      {(seguidores.length > 0 || siguiendo.length > 0) && (
-        <div className="seguidores-siguiendo-section">
-          {seguidores.length > 0 && (
-            <div className="seguidores-section">
-              <h3>Seguidores ({seguidores.length})</h3>
-              <div className="lista-usuarios-mini">
-                {seguidores.map((seg) => (
-                  <div key={seg.id_usuario} className="usuario-item">
-                    <img src={seg.foto_perfil || defaultProfile} alt={seg.nombre_usuario} className="foto-mini" />
-                    <span>@{seg.nombre_usuario}</span>
+        {/* Seguidores */}
+        <div className="sidebar-section">
+          <div className="sidebar-title">
+            Seguidores <span className="sidebar-count">{seguidores.length}</span>
+          </div>
+          {seguidores.length > 0 ? (
+            <div className="usuarios-lista">
+              {seguidores.slice(0, 5).map((seguidor) => (
+                <div key={seguidor.id_seguimiento} className="usuario-item">
+                  <img
+                    src={seguidor.foto_perfil || defaultProfile}
+                    alt={`Foto de ${seguidor.nombre_usuario}`}
+                    className="usuario-foto"
+                  />
+                  <div className="usuario-info">
+                    <span className="usuario-nombre">{seguidor.nombre_usuario}</span>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
+              {seguidores.length > 5 && (
+                <div className="ver-mas">
+                  <span>+{seguidores.length - 5} más</span>
+                </div>
+              )}
             </div>
-          )}
-          {siguiendo.length > 0 && (
-            <div className="siguiendo-section">
-              <h3>Siguiendo ({siguiendo.length})</h3>
-              <div className="lista-usuarios-mini">
-                {siguiendo.map((seg) => (
-                  <div key={seg.id_usuario} className="usuario-item">
-                    <img src={seg.foto_perfil || defaultProfile} alt={seg.nombre_usuario} className="foto-mini" />
-                    <span>@{seg.nombre_usuario}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+          ) : (
+            <p className="sin-contenido">No tiene seguidores</p>
           )}
         </div>
-      )}
+
+        {/* Siguiendo */}
+        <div className="sidebar-section">
+          <div className="sidebar-title">
+            Siguiendo <span className="sidebar-count">{siguiendo.length}</span>
+          </div>
+          {siguiendo.length > 0 ? (
+            <div className="usuarios-lista">
+              {siguiendo.slice(0, 5).map((seguido) => (
+                <div key={seguido.id_seguimiento} className="usuario-item">
+                  <img
+                    src={seguido.foto_perfil || defaultProfile}
+                    alt={`Foto de ${seguido.nombre_usuario}`}
+                    className="usuario-foto"
+                  />
+                  <div className="usuario-info">
+                    <span className="usuario-nombre">{seguido.nombre_usuario}</span>
+                  </div>
+                </div>
+              ))}
+              {siguiendo.length > 5 && (
+                <div className="ver-mas">
+                  <span>+{siguiendo.length - 5} más</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="sin-contenido">No sigue a nadie</p>
+          )}
+        </div>
+      </div>
 
       {/* Modal de Reporte */}
       {reporteModal && (
         <div className="modal-overlay">
           <div className="modal-reporte">
             <h2 className="titulo-reporte">⚠️ Reportar Usuario</h2>
+
             <div className="info-usuario-reportado">
               <img src={perfil.foto_perfil || defaultProfile} alt="Usuario" className="reporte-foto" />
               <span>@{perfil.usuario?.nombre_usuario}</span>
             </div>
+
             <div className="motivos-reporte">
               {[
-                "🚫 Contenido ofensivo o inapropiado (violencia, odio, lenguaje vulgar)",
+                "🚫 Contenido ofensivo o inapropiado",
                 "🎭 Suplantación de identidad",
                 "🧠 Acoso o comportamiento abusivo",
                 "🖼️ Plagio o uso no autorizado de obras",
@@ -325,63 +429,59 @@ export default function PerfilUsuario() {
                 "🔞 Contenido obsceno o inapropiado",
               ].map((motivo) => (
                 <label key={motivo}>
-                  <input 
-                    type="radio" 
-                    value={motivo} 
+                  <input
+                    type="radio"
+                    value={motivo}
                     checked={motivoReporte === motivo}
-                    onClick={() => setMotivoReporte((prev) => (prev === motivo ? "" : motivo))}
-                    readOnly 
+                    onChange={() => setMotivoReporte(motivo)}
                   />
                   {motivo}
                 </label>
               ))}
             </div>
-            <textarea 
-              className="reporte-textarea" 
+
+            <textarea
+              className="reporte-textarea"
               placeholder="Describe brevemente lo sucedido (opcional)..."
-              value={
-                ["🚫", "🎭", "🧠", "🖼️", "📢", "🔞"].some((emoji) => motivoReporte.includes(emoji))
-                  ? ""
-                  : motivoReporte
-              }
+              value={motivoReporte.includes("🚫") ? "" : motivoReporte}
               onChange={(e) => setMotivoReporte(e.target.value)}
             />
-            <label className="input-evidencia">
+
+            {/* Sección de subir o cambiar evidencia */}
+            <div className="contenedor-evidencia">
               {preview ? (
-                <img src={preview} alt="Evidencia subida" className="preview-img-inside" />
+                <div className="preview-wrapper">
+                  <img src={preview} alt="Evidencia subida" className="preview-img" />
+                  <div className="botones-evidencia">
+                    <label className="btn-cambiar">
+                      Cambiar imagen
+                      <input type="file" accept="image/*" onChange={handleFileSelect} hidden />
+                    </label>
+                    <button onClick={handleRemoveImage} className="btn-cancelar-img">
+                      Cancelar imagen
+                    </button>
+                  </div>
+                </div>
               ) : (
-                <>
+                <label className="input-evidencia">
                   <img src="/static/icons/upload.png" alt="Subir evidencia" className="icono-upload" />
                   <span>Haz clic o arrastra una imagen aquí</span>
-                </>
+                  <input type="file" accept="image/*" onChange={handleFileSelect} hidden />
+                </label>
               )}
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={(e) => {
-                  const file = e.target.files?.[0] || null;
-                  setEvidencia(file);
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => setPreview(reader.result as string);
-                    reader.readAsDataURL(file);
-                  } else {
-                    setPreview(null);
-                  }
-                }}
-              />
-            </label>
+            </div>
+
             <div className="acciones-modal">
               <button onClick={handleReportar} className="btn-enviar-reporte">
                 Enviar Reporte
               </button>
-              <button 
+              <button
                 onClick={() => {
                   setReporteModal(false);
                   setMotivoReporte("");
                   setPreview(null);
                   setEvidencia(null);
-                }} 
+                }}
                 className="btn-cancelar-reporte"
               >
                 Cancelar

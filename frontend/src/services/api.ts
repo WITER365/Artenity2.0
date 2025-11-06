@@ -62,7 +62,8 @@ export async function getPerfil(id_usuario: number) {
   const res = await api.get(`/perfiles/${id_usuario}`, {
     headers: {
       token: getToken(),
-      id_usuario: getUsuarioId() },
+      id_usuario: getUsuarioId(),
+    },
   });
   return res.data;
 }
@@ -82,28 +83,28 @@ export async function crearPublicacion(data: FormData) {
   return res.data;
 }
 
+// 🔹 Versión fusionada y segura de getPublicaciones()
 export async function getPublicaciones() {
-  const res = await api.get("/publicaciones");
+  const token = getToken();
+  const id_usuario = getUsuarioId();
+
+  const res = await api.get("/publicaciones", {
+    headers: { token, id_usuario },
+  });
   return res.data;
 }
 
 // ======== RELACIONES SOCIALES ========
 export async function seguirUsuario(id_seguido: number) {
   const res = await api.post(`/seguir/${id_seguido}`, null, {
-    headers: {
-      token: getToken(),
-      id_usuario: getUsuarioId(),
-    },
+    headers: { token: getToken(), id_usuario: getUsuarioId() },
   });
   return res.data;
 }
 
 export async function dejarDeSeguirUsuario(id_seguido: number) {
   const res = await api.delete(`/dejar-seguir/${id_seguido}`, {
-    headers: {
-      token: getToken(),
-      id_usuario: getUsuarioId(),
-    },
+    headers: { token: getToken(), id_usuario: getUsuarioId() },
   });
   return res.data;
 }
@@ -131,7 +132,7 @@ export async function responderSolicitudAmistad(id_solicitud: number, estado: st
     headers: {
       token: getToken(),
       id_usuario: getUsuarioId(),
-      "Content-Type": "multipart/form-data", // 🔹 importante
+      "Content-Type": "multipart/form-data",
     },
   });
   return res.data;
@@ -152,13 +153,11 @@ export async function obtenerAmigos(id_usuario?: number) {
   return res.data;
 }
 
-
- 
 // ======== ELIMINAR AMIGO ========
 export const eliminarAmigo = async (id_amigo: number) => {
   try {
-    const token = localStorage.getItem("token");
-    const id_usuario = JSON.parse(localStorage.getItem("usuario") || "{}").id_usuario;
+    const token = getToken();
+    const id_usuario = getUsuarioId();
     const response = await axios.delete(`${API_URL}/amigos/${id_amigo}`, {
       headers: { token, id_usuario },
     });
@@ -176,7 +175,7 @@ export async function getNotificaciones() {
   });
   return res.data;
 }
-// ======== NOTIFICACIONES ========
+
 export async function marcarNotificacionesLeidas() {
   const res = await api.put(
     "/notificaciones/leidas",
@@ -185,7 +184,6 @@ export async function marcarNotificacionesLeidas() {
   );
   return res.data;
 }
-
 
 // ======== REPORTAR USUARIO ========
 export async function reportarUsuario(id_reportado: number, motivo: string, evidencia?: File) {
@@ -204,19 +202,15 @@ export async function reportarUsuario(id_reportado: number, motivo: string, evid
   return res.data;
 }
 
-
 // ======== CATEGORÍAS ========
 export async function obtenerCategorias() {
   const res = await api.get("/categorias");
   return res.data;
 }
 
-// ======== ALIAS PARA COMPATIBILIDAD ========
 export const getSolicitudesAmistad = obtenerSolicitudesPendientes;
 export const getAmigos = obtenerAmigos;
 export const getCategorias = obtenerCategorias;
-
-
 
 // ======== SEGUIDORES Y SIGUIENDO ========
 export async function obtenerSiguiendo() {
@@ -239,6 +233,7 @@ export async function obtenerPublicacionesUsuario(id_usuario: number) {
   });
   return res.data;
 }
+
 export async function obtenerSeguidoresUsuario(id_usuario: number) {
   const res = await api.get(`/seguidores/${id_usuario}`, {
     headers: { token: getToken(), id_usuario: getUsuarioId() },
@@ -252,7 +247,8 @@ export async function obtenerSiguiendoUsuario(id_usuario: number) {
   });
   return res.data;
 }
-// ================ RECUPERACIÓN DE CONTRASEÑA ================
+
+// ======== RECUPERACIÓN DE CONTRASEÑA ========
 export async function solicitarRecuperacion(correo: string) {
   const res = await api.post("/olvidaste-contrasena", { correo });
   return res.data;
@@ -260,5 +256,56 @@ export async function solicitarRecuperacion(correo: string) {
 
 export async function restablecerContrasena(token: string, nueva_contrasena: string) {
   const res = await api.post("/restablecer-contrasena", { token, nueva_contrasena });
+  return res.data;
+}
+
+// ======== BLOQUEAR / DESBLOQUEAR USUARIO ========
+export async function bloquearUsuario(id_usuario_bloqueado: number) {
+  const res = await api.post(`/bloquear/${id_usuario_bloqueado}`, null, {
+    headers: { token: getToken(), id_usuario: getUsuarioId() },
+  });
+  return res.data;
+}
+
+export async function desbloquearUsuario(id_usuario_bloqueado: number) {
+  const res = await api.delete(`/desbloquear/${id_usuario_bloqueado}`, {
+    headers: { token: getToken(), id_usuario: getUsuarioId() },
+  });
+  return res.data;
+}
+
+export async function obtenerUsuariosBloqueados() {
+  const res = await api.get("/usuarios-bloqueados", {
+    headers: { token: getToken(), id_usuario: getUsuarioId() },
+  });
+  return res.data;
+}
+
+// ======== PUBLICACIONES: ACCIONES ========
+export async function eliminarPublicacion(id_publicacion: number) {
+  const res = await api.delete(`/publicaciones/${id_publicacion}`, {
+    headers: { token: getToken(), id_usuario: getUsuarioId() },
+  });
+  return res.data;
+}
+
+export async function noMeInteresa(id_publicacion: number) {
+  const res = await api.post(`/no-me-interesa/${id_publicacion}`, null, {
+    headers: { token: getToken(), id_usuario: getUsuarioId() },
+  });
+  return res.data;
+}
+
+export async function obtenerNoMeInteresa() {
+  const res = await api.get("/no-me-interesa", {
+    headers: { token: getToken(), id_usuario: getUsuarioId() },
+  });
+  return res.data;
+}
+
+export async function quitarNoMeInteresa(id_publicacion: number) {
+  const res = await api.delete(`/quitar-no-me-interesa/${id_publicacion}`, {
+    headers: { token: getToken(), id_usuario: getUsuarioId() },
+  });
   return res.data;
 }

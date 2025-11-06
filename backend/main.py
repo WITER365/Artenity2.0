@@ -820,6 +820,248 @@ async def reset_password(data: ResetPasswordRequest, db: Session = Depends(get_d
 
     return {"mensaje": "Contraseña restablecida correctamente"}
 
+# ------------------ BLOQUEAR USUARIO ------------------
+@app.post("/bloquear/{id_usuario_bloqueado}")
+def bloquear_usuario(
+    id_usuario_bloqueado: int,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Bloquear a otro usuario con verificación completa"""
+    if id_usuario_bloqueado == user_id:
+        raise HTTPException(status_code=400, detail="No puedes bloquearte a ti mismo")
+
+    # Verificar si el usuario a bloquear existe
+    usuario_a_bloquear = db.query(models.Usuario).filter(
+        models.Usuario.id_usuario == id_usuario_bloqueado
+    ).first()
+    
+    if not usuario_a_bloquear:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    # Verificar si ya está bloqueado
+    bloqueo_existente = db.query(models.BloqueoUsuario).filter(
+        models.BloqueoUsuario.id_bloqueador == user_id,
+        models.BloqueoUsuario.id_bloqueado == id_usuario_bloqueado
+    ).first()
+
+    if bloqueo_existente:
+        raise HTTPException(status_code=400, detail="Ya has bloqueado a este usuario")
+
+    # Crear bloqueo
+    nuevo_bloqueo = models.BloqueoUsuario(
+        id_bloqueador=user_id,
+        id_bloqueado=id_usuario_bloqueado,
+        fecha_bloqueo=datetime.utcnow()
+    )
+    db.add(nuevo_bloqueo)
+    
+    # Eliminar relaciones de seguimiento si existen (en ambas direcciones)
+    db.query(models.SeguirUsuario).filter(
+        ((models.SeguirUsuario.id_seguidor == user_id) & 
+         (models.SeguirUsuario.id_seguido == id_usuario_bloqueado)) |
+        ((models.SeguirUsuario.id_seguidor == id_usuario_bloqueado) & 
+         (models.SeguirUsuario.id_seguido == user_id))
+    ).delete()
+    
+    # Eliminar solicitudes de amistad pendientes
+    db.query(models.SolicitudAmistad).filter(
+        ((models.SolicitudAmistad.id_emisor == user_id) & 
+         (models.SolicitudAmistad.id_receptor == id_usuario_bloqueado)) |
+        ((models.SolicitudAmistad.id_emisor == id_usuario_bloqueado) & 
+         (models.SolicitudAmistad.id_receptor == user_id))
+    ).delete()
+    
+    # Eliminar relación de amistad si existe
+    db.query(models.Amistad).filter(
+        ((models.Amistad.id_usuario1 == user_id) & 
+         (models.Amistad.id_usuario2 == id_usuario_bloqueado)) |
+        ((models.Amistad.id_usuario1 == id_usuario_bloqueado) & 
+         (models.Amistad.id_usuario2 == user_id))
+    ).delete()
+    
+    db.commit()
+
+    return {"mensaje": "Usuario bloqueado correctamente"}
+# ------------------ ELIMINAR PUBLICACIÓN ------------------
+@app.delete("/publicaciones/{id_publicacion}")
+def eliminar_publicacion(
+    id_publicacion: int,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Eliminar una publicación (solo el dueño puede eliminarla)"""
+    publicacion = db.query(models.Publicacion).filter(
+        models.Publicacion.id_publicacion == id_publicacion
+    ).first()
+
+    if not publicacion:
+        raise HTTPException(status_code=404, detail="Publicación no encontrada")
+
+    if publicacion.id_usuario != user_id:
+        raise HTTPException(status_code=403, detail="No tienes permiso para eliminar esta publicación")
+
+    db.delete(publicacion)
+    db.commit()
+
+    return {"mensaje": "Publicación eliminada correctamente"}
+
+# ------------------ NO ME INTERESA ------------------
+@app.post("/no-me-interesa/{id_publicacion}")
+def no_me_interesa(
+    id_publicacion: int,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Marcar una publicación como 'No me interesa'"""
+    
+    # Verificar que la publicación existe
+    publicacion = db.query(models.Publicacion).filter(
+        models.Publicacion.id_publicacion == id_publicacion
+    ).first()
+    
+    if not publicacion:
+        raise HTTPException(status_code=404, detail="Publicación no encontrada")
+
+    # Verificar si ya existe en no me interesa
+    existente = db.query(models.NoMeInteresa).filter(
+        models.NoMeInteresa.id_usuario == user_id,
+        models.NoMeInteresa.id_publicacion == id_publicacion
+    ).first()
+
+    if existente:
+        raise HTTPException(status_code=400, detail="Ya marcaste esta publicación como 'No me interesa'")
+
+    # Crear nuevo registro
+    nuevo = models.NoMeInteresa(
+        id_usuario=user_id,
+        id_publicacion=id_publicacion,
+        fecha=datetime.utcnow()
+    )
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+
+    return {"mensaje": "Publicación marcada como 'No me interesa'", "id": nuevo.id_no_me_interesa}
+# ------------------ OBTENER USUARIOS BLOQUEADOS ------------------
+@app.get("/usuarios-bloqueados")
+def obtener_usuarios_bloqueados(
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Obtener lista de usuarios bloqueados por el usuario actual"""
+    bloqueos = db.query(models.BloqueoUsuario).filter(
+        models.BloqueoUsuario.id_bloqueador == user_id
+    ).all()
+
+    resultado = []
+    for bloqueo in bloqueos:
+        usuario_bloqueado = db.query(models.Usuario).filter(
+            models.Usuario.id_usuario == bloqueo.id_bloqueado
+        ).first()
+        
+        if usuario_bloqueado:
+            perfil = db.query(models.Perfil).filter(
+                models.Perfil.id_usuario == usuario_bloqueado.id_usuario
+            ).first()
+            
+            resultado.append({
+                "id_bloqueo": bloqueo.id_bloqueo,
+                "fecha_bloqueo": bloqueo.fecha_bloqueo,
+                "usuario": {
+                    "id_usuario": usuario_bloqueado.id_usuario,
+                    "nombre_usuario": usuario_bloqueado.nombre_usuario,
+                    "foto_perfil": perfil.foto_perfil if perfil else None
+                }
+            })
+
+    return resultado
+
+# ------------------ OBTENER PUBLICACIONES NO ME INTERESA ------------------
+@app.get("/no-me-interesa")
+def obtener_no_me_interesa(
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Obtener publicaciones marcadas como 'No me interesa'"""
+    no_me_interesa = db.query(models.NoMeInteresa).filter(
+        models.NoMeInteresa.id_usuario == user_id
+    ).all()
+
+    resultado = []
+    for item in no_me_interesa:
+        publicacion = db.query(models.Publicacion).filter(
+            models.Publicacion.id_publicacion == item.id_publicacion
+        ).first()
+        
+        if publicacion:
+            usuario = db.query(models.Usuario).filter(
+                models.Usuario.id_usuario == publicacion.id_usuario
+            ).first()
+            
+            perfil = db.query(models.Perfil).filter(
+                models.Perfil.id_usuario == usuario.id_usuario
+            ).first() if usuario else None
+            
+            resultado.append({
+                "id_no_me_interesa": item.id_no_me_interesa,  # Cambiado
+                "fecha": item.fecha,
+                "publicacion": {
+                    "id_publicacion": publicacion.id_publicacion,
+                    "contenido": publicacion.contenido,
+                    "imagen": publicacion.imagen,
+                    "fecha_creacion": publicacion.fecha_creacion,
+                    "usuario": {
+                        "id_usuario": usuario.id_usuario,
+                        "nombre_usuario": usuario.nombre_usuario,
+                        "foto_perfil": perfil.foto_perfil if perfil else None
+                    } if usuario else None
+                }
+            })
+
+    return resultado
+
+# ------------------ DESBLOQUEAR USUARIO ------------------
+@app.delete("/desbloquear/{id_usuario_bloqueado}")
+def desbloquear_usuario(
+    id_usuario_bloqueado: int,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Desbloquear a un usuario previamente bloqueado"""
+    bloqueo = db.query(models.BloqueoUsuario).filter(
+        models.BloqueoUsuario.id_bloqueador == user_id,
+        models.BloqueoUsuario.id_bloqueado == id_usuario_bloqueado
+    ).first()
+
+    if not bloqueo:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado en lista de bloqueados")
+
+    db.delete(bloqueo)
+    db.commit()
+
+    return {"mensaje": "Usuario desbloqueado correctamente"}
+
+# ------------------ QUITAR NO ME INTERESA ------------------
+@app.delete("/quitar-no-me-interesa/{id_publicacion}")
+def quitar_no_me_interesa(
+    id_publicacion: int,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Quitar una publicación de la lista 'No me interesa'"""
+    item = db.query(models.NoMeInteresa).filter(
+        models.NoMeInteresa.id_usuario == user_id,
+        models.NoMeInteresa.id_publicacion == id_publicacion
+    ).first()
+
+    if not item:
+        raise HTTPException(status_code=404, detail="Publicación no encontrada en lista 'No me interesa'")
+
+    db.delete(item)
+    db.commit()
+
+    return {"mensaje": "Publicación removida de 'No me interesa'"}
 # ------------------ HOME ------------------
 @app.get("/home")
 def home():

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 27-10-2025 a las 23:18:00
+-- Tiempo de generación: 06-11-2025 a las 02:33:39
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -39,8 +39,28 @@ CREATE TABLE `amistades` (
 --
 
 INSERT INTO `amistades` (`id_amistad`, `id_usuario1`, `id_usuario2`, `estado`) VALUES
-(1, 57, 58, 'aceptada'),
-(2, 1, 58, 'aceptada');
+(2, 1, 58, 'aceptada'),
+(5, 56, 58, 'aceptada');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `bloqueos_usuarios`
+--
+
+CREATE TABLE `bloqueos_usuarios` (
+  `id_bloqueo` int(11) NOT NULL,
+  `id_bloqueador` int(11) DEFAULT NULL,
+  `id_bloqueado` int(11) DEFAULT NULL,
+  `fecha_bloqueo` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Volcado de datos para la tabla `bloqueos_usuarios`
+--
+
+INSERT INTO `bloqueos_usuarios` (`id_bloqueo`, `id_bloqueador`, `id_bloqueado`, `fecha_bloqueo`) VALUES
+(4, 57, 58, '2025-11-06 01:27:07');
 
 -- --------------------------------------------------------
 
@@ -650,7 +670,31 @@ INSERT INTO `notificaciones` (`id_notificacion`, `id_usuario`, `mensaje`, `leido
 (46, 57, 'seba comenzó a seguirte', 1, '2025-10-26 22:15:04', 'nuevo_seguidor', 19),
 (47, 57, 'seba comenzó a seguirte', 1, '2025-10-26 22:16:21', 'nuevo_seguidor', 20),
 (48, 55, 'witer365 comenzó a seguirte', 0, '2025-10-26 23:11:29', 'nuevo_seguidor', 21),
-(49, 49, 'witer365 comenzó a seguirte', 0, '2025-10-27 18:40:39', 'nuevo_seguidor', 22);
+(49, 49, 'witer365 comenzó a seguirte', 0, '2025-10-27 18:40:39', 'nuevo_seguidor', 22),
+(50, 58, 'witer365 te ha enviado una solicitud de amistad', 1, '2025-11-01 22:36:01', 'solicitud_amistad', 18),
+(51, 58, 'witer365 comenzó a seguirte', 1, '2025-11-01 22:36:23', 'nuevo_seguidor', 23),
+(52, 57, 'laurapintora aceptó tu solicitud de amistad', 1, '2025-11-01 22:37:38', 'amistad_aceptada', 18),
+(53, 58, 'and te ha enviado una solicitud de amistad', 1, '2025-11-04 23:38:23', 'solicitud_amistad', 19),
+(54, 56, 'laurapintora aceptó tu solicitud de amistad', 1, '2025-11-04 23:39:26', 'amistad_aceptada', 19),
+(55, 58, 'and comenzó a seguirte', 1, '2025-11-06 00:21:35', 'nuevo_seguidor', 24),
+(56, 58, 'and comenzó a seguirte', 1, '2025-11-06 00:24:06', 'nuevo_seguidor', 25),
+(57, 58, 'and te ha enviado una solicitud de amistad', 1, '2025-11-06 01:20:58', 'solicitud_amistad', 20),
+(58, 58, 'and comenzó a seguirte', 1, '2025-11-06 01:21:02', 'nuevo_seguidor', 26),
+(59, 58, 'and comenzó a seguirte', 1, '2025-11-06 01:22:44', 'nuevo_seguidor', 27),
+(60, 56, 'laurapintora aceptó tu solicitud de amistad', 1, '2025-11-06 01:23:20', 'amistad_aceptada', 20);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `no_me_interesa`
+--
+
+CREATE TABLE `no_me_interesa` (
+  `id_no_me_interesa` int(11) NOT NULL,
+  `id_usuario` int(11) DEFAULT NULL,
+  `id_publicacion` int(11) DEFAULT NULL,
+  `fecha` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -719,8 +763,10 @@ INSERT INTO `perfiles` (`id_perfil`, `id_usuario`, `descripcion`, `foto_perfil`,
 (47, 54, NULL, NULL, NULL),
 (48, 55, NULL, 'http://localhost:8000/static/perfiles/perfil_55_1761516857.jpg', NULL),
 (49, 56, 'tan poco se', 'http://localhost:8000/static/perfiles/perfil_56.avif', 'me gusta el arte y dormir'),
-(50, 57, 'me gusta dormir', 'http://localhost:8000/static/perfiles/perfil_57_1761521103.jpg', 'tengo hambre'),
-(51, 58, '\"Artista digital especializado en surrealismo moderno.\"', 'http://localhost:8000/static/perfiles/perfil_58_1761516762.jpg', '\"Desde 2015 exploro el arte digital fusionando elementos de fantasía y tecnología.\"');
+(50, 57, 'me gusta dormir SI', 'http://localhost:8000/static/perfiles/perfil_57_1762299627.jpg', 'tengo hambre SI'),
+(51, 58, '\"Artista digital especializado en surrealismo moderno.\"', 'http://localhost:8000/static/perfiles/perfil_58_1761516762.jpg', '\"Desde 2015 exploro el arte digital fusionando elementos de fantasía y tecnología.\"'),
+(52, 59, NULL, NULL, NULL),
+(53, 60, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -815,11 +861,9 @@ INSERT INTO `publicaciones` (`id_publicacion`, `id_usuario`, `contenido`, `image
 (14, 57, 'ya casi se logra', 'http://localhost:8000/static/posts/57_3.jpg', '2025-10-11 20:06:46'),
 (15, 57, 'bvbvbvb', 'http://localhost:8000/static/posts/57_2.jpg', '2025-10-11 20:27:39'),
 (16, 56, 'vhgghg', 'http://localhost:8000/static/posts/56_3.jpg', '2025-10-11 23:10:03'),
-(17, 56, 'tengo sueño', 'http://localhost:8000/static/posts/56_5.jpg', '2025-10-12 23:41:42'),
 (18, 58, 'Primera publicación de prueba desde Artenity', 'http://localhost:8000/static/posts/58_4.avif', '2025-10-24 13:59:55'),
-(19, 57, 'vcvcvcv', NULL, '2025-10-26 20:22:01'),
-(20, 57, 'si', NULL, '2025-10-26 21:40:51'),
-(21, 55, 'hola ahí esperanza', NULL, '2025-10-26 22:14:46');
+(21, 55, 'hola ahí esperanza', NULL, '2025-10-26 22:14:46'),
+(22, 58, 'AHI HAMBRE GENTE ', NULL, '2025-11-01 22:38:01');
 
 -- --------------------------------------------------------
 
@@ -894,7 +938,30 @@ INSERT INTO `reportes_usuarios` (`id_reporte`, `id_reportante`, `id_reportado`, 
 (2, 57, 55, 'CONTENIDO OFENSIVO ', NULL, '2025-10-27 15:22:03'),
 (3, 57, 55, '🚫 Contenido ofensivo o inapropiado (violencia, odio, lenguaje vulgar)', NULL, '2025-10-27 15:22:30'),
 (4, 57, 55, '🚫 Contenido ofensivo o inapropiado (violencia, odio, lenguaje vulgar)', 'http://localhost:8000/static/reportes/reporte_57_55_1761596595.jpg', '2025-10-27 15:23:15'),
-(5, 57, 55, '🖼️ Plagio o uso no autorizado de obras', 'http://localhost:8000/static/reportes/reporte_57_55_1761600922.jpg', '2025-10-27 16:35:22');
+(5, 57, 55, '🖼️ Plagio o uso no autorizado de obras', 'http://localhost:8000/static/reportes/reporte_57_55_1761600922.jpg', '2025-10-27 16:35:22'),
+(6, 57, 58, '🔞 Contenido obsceno o inapropiado', 'http://localhost:8000/static/reportes/reporte_57_58_1762036616.jpg', '2025-11-01 17:36:56'),
+(7, 56, 58, 'xsxsxsxsx', 'http://localhost:8000/static/reportes/reporte_56_58_1762389172.jpg', '2025-11-05 19:32:52');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `reset_password_tokens`
+--
+
+CREATE TABLE `reset_password_tokens` (
+  `id` int(11) NOT NULL,
+  `id_usuario` int(11) NOT NULL,
+  `token` varchar(255) NOT NULL,
+  `expiracion` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Volcado de datos para la tabla `reset_password_tokens`
+--
+
+INSERT INTO `reset_password_tokens` (`id`, `id_usuario`, `token`, `expiracion`) VALUES
+(18, 59, '224ccb4f-211b-47e2-a3d4-c0cc1900337f', '2025-11-01 23:15:25'),
+(19, 57, '030c7182-8f3b-4180-ae06-9aa9e3e13ec8', '2025-11-01 23:18:00');
 
 -- --------------------------------------------------------
 
@@ -918,14 +985,12 @@ INSERT INTO `seguir_usuario` (`id_seguimiento`, `id_seguidor`, `id_seguido`, `fe
 (6, 1, 57, '2025-10-12 23:20:59'),
 (7, 56, 22, '2025-10-24 12:08:58'),
 (8, 1, 56, '2025-10-24 12:13:00'),
-(14, 56, 58, '2025-10-24 17:44:46'),
 (15, 57, 56, '2025-10-24 17:54:01'),
-(16, 58, 57, '2025-10-24 18:11:08'),
 (17, 58, 22, '2025-10-24 18:37:04'),
-(18, 57, 58, '2025-10-26 20:21:38'),
 (20, 55, 57, '2025-10-26 22:16:21'),
 (21, 57, 55, '2025-10-26 23:11:29'),
-(22, 57, 49, '2025-10-27 18:40:39');
+(22, 57, 49, '2025-10-27 18:40:39'),
+(27, 56, 58, '2025-11-06 01:22:44');
 
 -- --------------------------------------------------------
 
@@ -1012,58 +1077,11 @@ INSERT INTO `usuarios` (`id_usuario`, `nombre`, `apellido`, `correo_electronico`
 (53, 'anderson', 'dcdcdcd', 'cdcdcdcdc@gmail.com', 'cscscscsc', '2025-10-13', 'Hombre', 'circo', '3197255375', 'cscs'),
 (54, 'anderson', 'roldan', 'roldan@gmail.com', '12345', '2018-05-30', 'Hombre', 'dibujo', '314315545445', 'roldan'),
 (55, 'seba', 'rodriguez', 'seba@gmail.com', '123456', '2018-06-12', 'Hombre', 'circo', '65365436546354364', 'seba'),
-(56, 'wáter', 'sena2', 'anderson.17cardenas@gmail.com', '123456', '2010-10-06', 'Personalizado', 'circo', '223232323', 'and'),
+(56, 'wáter', 'sena2', 'anderson.17cardenas@gmail.com', 'witer123456', '2010-10-06', 'Personalizado', 'circo', '223232323', 'and'),
 (57, 'witer365', 'real', 'anderson@gmail.com', '12345', '2006-07-09', 'Hombre', 'dibujo', '653654365463543645', 'witer365'),
-(58, 'Laura', 'Pérez', 'laura.perez@example.com', 'Laura123*', '1998-05-10', 'Mujer', 'pintura', '3005678910', 'laurapintora');
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `usuarios_bloqueados`
---
-
-CREATE TABLE `usuarios_bloqueados` (
-  `id_bloqueo` int(11) NOT NULL,
-  `id_usuario` int(11) NOT NULL,
-  `id_bloqueado` int(11) NOT NULL,
-  `fecha_bloqueo` datetime DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Volcado de datos para la tabla `usuarios_bloqueados`
---
-
-INSERT INTO `usuarios_bloqueados` (`id_bloqueo`, `id_usuario`, `id_bloqueado`, `fecha_bloqueo`) VALUES
-(1, 1, 5, '2025-01-16 11:00:00'),
-(2, 2, 6, '2025-01-16 11:05:00'),
-(3, 3, 7, '2025-01-16 11:10:00'),
-(4, 4, 8, '2025-01-16 11:15:00'),
-(5, 5, 9, '2025-01-16 11:20:00'),
-(6, 6, 10, '2025-01-16 11:25:00'),
-(7, 7, 11, '2025-01-16 11:30:00'),
-(8, 8, 12, '2025-01-16 11:35:00'),
-(9, 9, 13, '2025-01-16 11:40:00'),
-(10, 10, 14, '2025-01-16 11:45:00'),
-(11, 11, 15, '2025-01-16 11:50:00'),
-(12, 12, 16, '2025-01-16 11:55:00'),
-(13, 13, 17, '2025-01-16 12:00:00'),
-(14, 14, 18, '2025-01-16 12:05:00'),
-(15, 15, 19, '2025-01-16 12:10:00'),
-(16, 16, 20, '2025-01-16 12:15:00'),
-(17, 17, 21, '2025-01-16 12:20:00'),
-(18, 18, 22, '2025-01-16 12:25:00'),
-(19, 19, 23, '2025-01-16 12:30:00'),
-(20, 20, 24, '2025-01-16 12:35:00'),
-(21, 21, 25, '2025-01-16 12:40:00'),
-(22, 22, 26, '2025-01-16 12:45:00'),
-(23, 23, 27, '2025-01-16 12:50:00'),
-(24, 24, 28, '2025-01-16 12:55:00'),
-(25, 25, 29, '2025-01-16 13:00:00'),
-(26, 26, 30, '2025-01-16 13:05:00'),
-(27, 27, 1, '2025-01-16 13:10:00'),
-(28, 28, 2, '2025-01-16 13:15:00'),
-(29, 29, 3, '2025-01-16 13:20:00'),
-(30, 30, 4, '2025-01-16 13:25:00');
+(58, 'Laura', 'Pérez', 'laura.perez@example.com', 'Laura123*', '1998-05-10', 'Mujer', 'pintura', '3005678910', 'laurapintora'),
+(59, 'artenity', 'agirre', 'w59345907@gmail.com', 'wtr#56789', '2009-02-18', 'Hombre', 'escultura', '3232025652', 'wtr856'),
+(60, 'erca', 'asassa', 'and@gmail.com', 'and3', '2007-09-11', 'Hombre', 'ballet', '321455698225', 'and2');
 
 --
 -- Índices para tablas volcadas
@@ -1076,6 +1094,15 @@ ALTER TABLE `amistades`
   ADD PRIMARY KEY (`id_amistad`),
   ADD KEY `id_usuario1` (`id_usuario1`),
   ADD KEY `id_usuario2` (`id_usuario2`);
+
+--
+-- Indices de la tabla `bloqueos_usuarios`
+--
+ALTER TABLE `bloqueos_usuarios`
+  ADD PRIMARY KEY (`id_bloqueo`),
+  ADD KEY `id_bloqueador` (`id_bloqueador`),
+  ADD KEY `id_bloqueado` (`id_bloqueado`),
+  ADD KEY `ix_bloqueos_usuarios_id_bloqueo` (`id_bloqueo`);
 
 --
 -- Indices de la tabla `categorias_obra`
@@ -1162,6 +1189,15 @@ ALTER TABLE `notificaciones`
   ADD KEY `idx_id_usuario` (`id_usuario`);
 
 --
+-- Indices de la tabla `no_me_interesa`
+--
+ALTER TABLE `no_me_interesa`
+  ADD PRIMARY KEY (`id_no_me_interesa`),
+  ADD KEY `id_usuario` (`id_usuario`),
+  ADD KEY `id_publicacion` (`id_publicacion`),
+  ADD KEY `ix_no_me_interesa_id_no_me_interesa` (`id_no_me_interesa`);
+
+--
 -- Indices de la tabla `perfiles`
 --
 ALTER TABLE `perfiles`
@@ -1199,6 +1235,14 @@ ALTER TABLE `reportes_usuarios`
   ADD KEY `fk_reportado` (`id_reportado`);
 
 --
+-- Indices de la tabla `reset_password_tokens`
+--
+ALTER TABLE `reset_password_tokens`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_token` (`token`),
+  ADD KEY `idx_id_usuario` (`id_usuario`);
+
+--
 -- Indices de la tabla `seguir_usuario`
 --
 ALTER TABLE `seguir_usuario`
@@ -1223,14 +1267,6 @@ ALTER TABLE `usuarios`
   ADD PRIMARY KEY (`id_usuario`);
 
 --
--- Indices de la tabla `usuarios_bloqueados`
---
-ALTER TABLE `usuarios_bloqueados`
-  ADD PRIMARY KEY (`id_bloqueo`),
-  ADD KEY `id_usuario` (`id_usuario`),
-  ADD KEY `id_bloqueado` (`id_bloqueado`);
-
---
 -- AUTO_INCREMENT de las tablas volcadas
 --
 
@@ -1238,49 +1274,67 @@ ALTER TABLE `usuarios_bloqueados`
 -- AUTO_INCREMENT de la tabla `amistades`
 --
 ALTER TABLE `amistades`
-  MODIFY `id_amistad` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id_amistad` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT de la tabla `bloqueos_usuarios`
+--
+ALTER TABLE `bloqueos_usuarios`
+  MODIFY `id_bloqueo` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT de la tabla `notificaciones`
 --
 ALTER TABLE `notificaciones`
-  MODIFY `id_notificacion` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
+  MODIFY `id_notificacion` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=61;
+
+--
+-- AUTO_INCREMENT de la tabla `no_me_interesa`
+--
+ALTER TABLE `no_me_interesa`
+  MODIFY `id_no_me_interesa` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT de la tabla `perfiles`
 --
 ALTER TABLE `perfiles`
-  MODIFY `id_perfil` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=52;
+  MODIFY `id_perfil` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=54;
 
 --
 -- AUTO_INCREMENT de la tabla `publicaciones`
 --
 ALTER TABLE `publicaciones`
-  MODIFY `id_publicacion` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `id_publicacion` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT de la tabla `reportes_usuarios`
 --
 ALTER TABLE `reportes_usuarios`
-  MODIFY `id_reporte` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id_reporte` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
+-- AUTO_INCREMENT de la tabla `reset_password_tokens`
+--
+ALTER TABLE `reset_password_tokens`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
 
 --
 -- AUTO_INCREMENT de la tabla `seguir_usuario`
 --
 ALTER TABLE `seguir_usuario`
-  MODIFY `id_seguimiento` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `id_seguimiento` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT de la tabla `solicitud_de_amistad`
 --
 ALTER TABLE `solicitud_de_amistad`
-  MODIFY `id_solicitud` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id_solicitud` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT de la tabla `usuarios`
 --
 ALTER TABLE `usuarios`
-  MODIFY `id_usuario` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=59;
+  MODIFY `id_usuario` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=61;
 
 --
 -- Restricciones para tablas volcadas
@@ -1292,6 +1346,20 @@ ALTER TABLE `usuarios`
 ALTER TABLE `amistades`
   ADD CONSTRAINT `amistades_ibfk_1` FOREIGN KEY (`id_usuario1`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE,
   ADD CONSTRAINT `amistades_ibfk_2` FOREIGN KEY (`id_usuario2`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE;
+
+--
+-- Filtros para la tabla `bloqueos_usuarios`
+--
+ALTER TABLE `bloqueos_usuarios`
+  ADD CONSTRAINT `bloqueos_usuarios_ibfk_1` FOREIGN KEY (`id_bloqueador`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE,
+  ADD CONSTRAINT `bloqueos_usuarios_ibfk_2` FOREIGN KEY (`id_bloqueado`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE;
+
+--
+-- Filtros para la tabla `no_me_interesa`
+--
+ALTER TABLE `no_me_interesa`
+  ADD CONSTRAINT `no_me_interesa_ibfk_1` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE,
+  ADD CONSTRAINT `no_me_interesa_ibfk_2` FOREIGN KEY (`id_publicacion`) REFERENCES `publicaciones` (`id_publicacion`) ON DELETE CASCADE;
 
 --
 -- Filtros para la tabla `perfiles`
@@ -1311,6 +1379,12 @@ ALTER TABLE `publicaciones`
 ALTER TABLE `reportes_usuarios`
   ADD CONSTRAINT `fk_reportado` FOREIGN KEY (`id_reportado`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_reportante` FOREIGN KEY (`id_reportante`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Filtros para la tabla `reset_password_tokens`
+--
+ALTER TABLE `reset_password_tokens`
+  ADD CONSTRAINT `fk_reset_password_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE;
 
 --
 -- Filtros para la tabla `seguir_usuario`

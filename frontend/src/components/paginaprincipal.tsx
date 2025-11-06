@@ -1,3 +1,4 @@
+// src/pages/PaginaPrincipal.jsx
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -7,12 +8,19 @@ import {
   MessageSquare,
   Settings,
   Image,
+  MoreVertical,
 } from "lucide-react";
 import "../styles/paginaprincipal.css";
 import defaultProfile from "../assets/img/fotoperfildefault.jpg";
-import { getPublicaciones, crearPublicacion } from "../services/api";
+import {
+  getPublicaciones,
+  crearPublicacion,
+  eliminarPublicacion,
+  bloquearUsuario,
+  noMeInteresa,
+} from "../services/api";
 import { useAuth } from "../context/AuthContext";
-import NotificacionesPanel from "../components/NotificacionesPanel"; // ✅ Panel de notificaciones
+import NotificacionesPanel from "../components/NotificacionesPanel";
 
 export default function PaginaPrincipal() {
   const navigate = useNavigate();
@@ -21,6 +29,7 @@ export default function PaginaPrincipal() {
   const [publicaciones, setPublicaciones] = useState<any[]>([]);
   const [contenido, setContenido] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [menuAbierto, setMenuAbierto] = useState<number | null>(null);
 
   // ✅ Añadir clase al body
   useEffect(() => {
@@ -31,50 +40,48 @@ export default function PaginaPrincipal() {
   }, []);
 
   // ✅ Cargar publicaciones
-const cargarPublicaciones = async () => {
-  try {
-    const posts = await getPublicaciones();
+  const cargarPublicaciones = async () => {
+    try {
+      const posts = await getPublicaciones();
 
-    const postsConFotosActualizadas = posts.map((p: any) => {
-      let fotoPerfil = defaultProfile;
+      const postsConFotosActualizadas = posts.map((p: any) => {
+        let fotoPerfil = defaultProfile;
 
-      // Si hay usuario y perfil con foto válida, úsala
-      if (p.usuario?.perfil?.foto_perfil && p.usuario.perfil.foto_perfil.trim() !== "") {
-        fotoPerfil = `${p.usuario.perfil.foto_perfil}?t=${new Date().getTime()}`;
-      }
+        if (
+          p.usuario?.perfil?.foto_perfil &&
+          p.usuario.perfil.foto_perfil.trim() !== ""
+        ) {
+          fotoPerfil = `${p.usuario.perfil.foto_perfil}?t=${new Date().getTime()}`;
+        }
 
-      return {
-        ...p,
-        usuario: {
-          ...p.usuario,
-          perfil: {
-            ...p.usuario?.perfil,
-            foto_perfil: fotoPerfil,
+        return {
+          ...p,
+          usuario: {
+            ...p.usuario,
+            perfil: {
+              ...p.usuario?.perfil,
+              foto_perfil: fotoPerfil,
+            },
           },
-        },
-      };
-    });
+        };
+      });
 
-    setPublicaciones(postsConFotosActualizadas);
-  } catch (error) {
-    console.error("Error cargando publicaciones:", error);
-  }
-};
+      setPublicaciones(postsConFotosActualizadas);
+    } catch (error) {
+      console.error("Error cargando publicaciones:", error);
+    }
+  };
 
   useEffect(() => {
     cargarPublicaciones();
   }, []);
 
-  // ✅ Actualizar publicaciones cuando cambie una foto de perfil
+  // ✅ Recargar cuando cambie una foto de perfil
   useEffect(() => {
-    const handleFotoActualizada = () => {
-      cargarPublicaciones();
-    };
-
+    const handleFotoActualizada = () => cargarPublicaciones();
     window.addEventListener("fotoPerfilActualizada", handleFotoActualizada);
-    return () => {
+    return () =>
       window.removeEventListener("fotoPerfilActualizada", handleFotoActualizada);
-    };
   }, []);
 
   // ✅ Crear publicación
@@ -102,6 +109,58 @@ const cargarPublicaciones = async () => {
     window.location.href = "/login";
   };
 
+  // ✅ Funciones del menú
+  const toggleMenu = (postId: number) => {
+    setMenuAbierto(menuAbierto === postId ? null : postId);
+  };
+
+  const handleEliminarPublicacion = async (postId: number) => {
+    if (!window.confirm("¿Estás seguro de que quieres eliminar esta publicación?"))
+      return;
+
+    try {
+      await eliminarPublicacion(postId);
+      setPublicaciones(publicaciones.filter((p) => p.id_publicacion !== postId));
+      setMenuAbierto(null);
+    } catch (error) {
+      console.error("Error eliminando publicación:", error);
+      alert("Error al eliminar la publicación");
+    }
+  };
+
+  const handleBloquearUsuario = async (userId: number, userName: string) => {
+    if (!window.confirm(`¿Estás seguro de que quieres bloquear a ${userName}?`))
+      return;
+
+    try {
+      await bloquearUsuario(userId);
+      setPublicaciones(publicaciones.filter((p) => p.usuario.id_usuario !== userId));
+      setMenuAbierto(null);
+      alert("Usuario bloqueado correctamente");
+    } catch (error) {
+      console.error("Error bloqueando usuario:", error);
+      alert("Error al bloquear el usuario");
+    }
+  };
+
+  const handleNoMeInteresa = async (postId: number) => {
+    try {
+      await noMeInteresa(postId);
+      setPublicaciones(publicaciones.filter((p) => p.id_publicacion !== postId));
+      setMenuAbierto(null);
+    } catch (error) {
+      console.error("Error marcando como no me interesa:", error);
+      alert("Error al marcar la publicación");
+    }
+  };
+
+  // ✅ Cerrar menú al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = () => setMenuAbierto(null);
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
+
   return (
     <div className="main-container">
       {/* 🔹 Barra superior */}
@@ -110,7 +169,6 @@ const cargarPublicaciones = async () => {
 
         <NotificacionesPanel usuario={usuario} />
 
-        {/* Perfil del usuario autenticado */}
         <button className="img-btn" onClick={() => navigate("/perfil")}>
           <img
             src={
@@ -192,19 +250,20 @@ const cargarPublicaciones = async () => {
         <div className="posts">
           {publicaciones.map((post) => (
             <div key={post.id_publicacion} className="post-card">
-              {/* Header del post */}
               <div className="post-header">
                 <Link to={`/usuario/${post.usuario?.id_usuario}`}>
-                <img
+                  <img
                     src={
-                   post.usuario?.perfil?.foto_perfil && post.usuario.perfil.foto_perfil.trim() !== ""
-                   ? post.usuario.perfil.foto_perfil
-                    : defaultProfile
+                      post.usuario?.perfil?.foto_perfil &&
+                      post.usuario.perfil.foto_perfil.trim() !== ""
+                        ? post.usuario.perfil.foto_perfil
+                        : defaultProfile
                     }
-                  alt="foto de perfil"
-                  className="perfiles perfiles-topbar"
-               />
+                    alt="foto de perfil"
+                    className="foto-perfil-post"
+                  />
                 </Link>
+
                 <div className="user-info">
                   <span className="username">
                     {post.usuario?.nombre_usuario || "Usuario"}
@@ -212,6 +271,67 @@ const cargarPublicaciones = async () => {
                   <span className="timestamp">
                     {new Date(post.fecha_creacion).toLocaleString()}
                   </span>
+                </div>
+
+                {/* Menú de tres puntos */}
+                <div className="post-menu-container">
+                  <button
+                    className="menu-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      toggleMenu(post.id_publicacion);
+                    }}
+                  >
+                    <MoreVertical size={16} />
+                  </button>
+
+                  {menuAbierto === post.id_publicacion && (
+                    <div
+                      className="post-menu"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                    >
+                      {post.usuario?.id_usuario === usuario?.id_usuario && (
+                        <button
+                          className="menu-item delete"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEliminarPublicacion(post.id_publicacion);
+                          }}
+                        >
+                          Eliminar publicación
+                        </button>
+                      )}
+
+                      {post.usuario?.id_usuario !== usuario?.id_usuario && (
+                        <button
+                          className="menu-item block"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleBloquearUsuario(
+                              post.usuario.id_usuario,
+                              post.usuario.nombre_usuario
+                            );
+                          }}
+                        >
+                          Bloquear usuario
+                        </button>
+                      )}
+
+                      <button
+                        className="menu-item not-interested"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleNoMeInteresa(post.id_publicacion);
+                        }}
+                      >
+                        No me interesa
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 

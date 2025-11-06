@@ -427,3 +427,119 @@ body.pagina-principal {
   transition: transform 0.2s ease-in-out;
 }
 
+/* Estilos para el menú de opciones */
+.post-menu-container {
+  position: relative;
+  margin-left: auto;
+}
+
+.menu-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.menu-btn:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.post-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  min-width: 180px;
+  overflow: hidden;
+}
+
+.menu-item {
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 14px;
+}
+
+.menu-item:hover {
+  background-color: #f5f5f5;
+}
+
+.menu-item.delete {
+  color: #e74c3c;
+}
+
+.menu-item.delete:hover {
+  background-color: #ffeaea;
+}
+
+.menu-item.block {
+  color: #e67e22;
+}
+
+.menu-item.block:hover {
+  background-color: #fff3e0;
+}
+
+.menu-item.not-interested {
+  color: #7f8c8d;
+}
+
+.menu-item.not-interested:hover {
+  background-color: #f8f9fa;
+}
+
+/* Asegurar que el header del post tenga posición relativa */
+.post-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+}
+
+
+.foto-perfil-post {
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #ccc;
+  margin-right: 12px;
+  transition: transform 0.2s ease;
+  flex-shrink: 0; /* evita que se deforme si hay texto largo */
+}
+
+.foto-perfil-post:hover {
+  transform: scale(1.06);
+}
+/* 🔹 Contenido del post */
+.post-content {
+  text-align: left;          
+  font-size: 1.2rem;        
+  line-height: 1.6;         
+  font-weight: 500;          
+  color: #222;               
+  margin-top: 10px;
+  margin-bottom: 15px;
+}
+
+
+.post-content img {
+  display: block;
+  margin: 10px auto;
+  border-radius: 12px;
+  max-width: 100%;
+}
