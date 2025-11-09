@@ -543,38 +543,45 @@ export default function PaginaPrincipal() {
       </div>
 
       {/* 🔹 Sidebar izquierda */}
-      <aside className="sidebar">
-        <div>
-          <div className="text-center text-2xl font-bold mb-8">🎨 Artenity</div>
-          <nav className="space-y-4">
-            <button className="nav-btn" onClick={() => navigate("/principal")}>
-              <Home /> Home
-            </button>
-            <button className="nav-btn">
-              <Compass /> Explorar
-            </button>
-            <button className="nav-btn">
-              <Grid /> Categorías
-            </button>
-            <button className="nav-btn" onClick={() => navigate("/mensajes")}>
-              <MessageSquare /> Mensajes
-            </button>
-            <button className="nav-btn">
-              <Settings /> Configuración
-            </button>
-            <button className="nav-btn">
-              <Image /> Galería de Arte
-            </button>
-          </nav>
-        </div>
-
-        <button className="post-btn mt-8" onClick={handlePost}>
-          PUBLICAR
-        </button>
-        <button className="post-btn mt-4" onClick={handleLogout}>
-          CERRAR SESIÓN
-        </button>
-      </aside>
+<aside className="sidebar">
+  <div>
+    <div className="text-center text-2xl font-bold mb-8">🎨 Artenity</div>
+    <nav>
+      <ul className="space-y-4">
+        <li>
+          <button className="nav-btn" onClick={() => navigate("/principal")}>
+            <Home /> Home
+          </button>
+        </li>
+        <li>
+          <button className="nav-btn">
+            <Compass /> Explorar
+          </button>
+        </li>
+        <li>
+          <button className="nav-btn">
+            <Grid /> Categorías
+          </button>
+        </li>
+        <li>
+          <button className="nav-btn" onClick={() => navigate("/mensajes")}>
+            <MessageSquare /> Mensajes
+          </button>
+        </li>
+        <li>
+          <button className="nav-btn">
+            <Settings /> Configuración
+          </button>
+        </li>
+        <li>
+          <button className="nav-btn">
+            <Image /> Galería de Arte
+          </button>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</aside>
 
       {/* 🔹 Sección central */}
       <section className="center-section">
