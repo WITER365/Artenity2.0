@@ -28,6 +28,7 @@ interface AuthContextType {
   logout: () => void;
   actualizarFotoPerfil: (nuevaFoto: string) => void;
   forzarActualizacionPerfil: () => void;
+  recargarPerfilCompleto: () => Promise<void>; // 👈 NUEVA FUNCIÓN
   usuariosBloqueados: number[];
   publicacionesNoMeInteresa: number[];
   cargarBloqueados: () => Promise<void>;
@@ -47,7 +48,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [actualizacion, setActualizacion] = useState(0);
   const [usuariosBloqueados, setUsuariosBloqueados] = useState<number[]>([]);
   const [publicacionesNoMeInteresa, setPublicacionesNoMeInteresa] = useState<number[]>([]);
-  const [loading, setLoading] = useState(true); // 👈 nuevo estado
+  const [loading, setLoading] = useState(true);
+
+  // -------------------- Función para obtener URL con timestamp --------------------
+  const getImageUrlWithTimestamp = (imageUrl: string | undefined | null): string | null => {
+    if (!imageUrl || imageUrl.trim() === "") return null;
+    
+    const separator = imageUrl.includes('?') ? '&' : '?';
+    return `${imageUrl}${separator}t=${new Date().getTime()}`;
+  };
 
   // -------------------- Cargar listas --------------------
   const cargarBloqueados = async () => {
@@ -89,6 +98,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setPublicacionesNoMeInteresa((prev) => prev.filter((id) => id !== idPublicacion));
   };
 
+  // -------------------- Función para actualizar usuario --------------------
+  const actualizarUsuario = (nuevosDatos: Partial<Usuario>) => {
+    if (usuario) {
+      const usuarioActualizado = { ...usuario, ...nuevosDatos };
+      setUsuario(usuarioActualizado);
+      localStorage.setItem("usuario", JSON.stringify(usuarioActualizado));
+      return usuarioActualizado;
+    }
+    return usuario;
+  };
+
+  // -------------------- Recargar perfil completo --------------------
+  const recargarPerfilCompleto = async (): Promise<void> => {
+    if (usuario?.id_usuario && token) {
+      try {
+        const perfilData = await getPerfil(usuario.id_usuario);
+        
+        // Procesar la foto de perfil con timestamp
+        const fotoConTimestamp = getImageUrlWithTimestamp(perfilData.foto_perfil);
+        
+        const usuarioActualizado = {
+          ...usuario,
+          foto_perfil: fotoConTimestamp,
+          perfil: {
+            ...usuario.perfil,
+            ...perfilData,
+            foto_perfil: fotoConTimestamp
+          }
+        };
+        
+        setUsuario(usuarioActualizado);
+        localStorage.setItem("usuario", JSON.stringify(usuarioActualizado));
+        
+        console.log("✅ Perfil recargado completamente:", usuarioActualizado);
+        
+      } catch (error) {
+        console.error("❌ Error recargando perfil:", error);
+        throw error;
+      }
+    }
+  };
+
   // -------------------- Cargar datos guardados --------------------
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
@@ -98,21 +149,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (storedUsuario) {
       const parsedUser = JSON.parse(storedUsuario);
+      
+      // Procesar foto de perfil con timestamp al cargar
+      if (parsedUser?.foto_perfil) {
+        parsedUser.foto_perfil = getImageUrlWithTimestamp(parsedUser.foto_perfil);
+      }
+      if (parsedUser?.perfil?.foto_perfil) {
+        parsedUser.perfil.foto_perfil = getImageUrlWithTimestamp(parsedUser.perfil.foto_perfil);
+      }
+      
       setUsuario(parsedUser);
 
       if (parsedUser?.id_usuario && storedToken) {
         getPerfil(parsedUser.id_usuario)
           .then((perfilData) => {
-            let nuevaFoto = perfilData.foto_perfil || parsedUser.foto_perfil;
-            if (nuevaFoto) nuevaFoto = `${nuevaFoto}?t=${new Date().getTime()}`;
-            const usuarioActualizado = { ...parsedUser, foto_perfil: nuevaFoto };
+            // Procesar la nueva foto con timestamp
+            const nuevaFoto = getImageUrlWithTimestamp(perfilData.foto_perfil || parsedUser.foto_perfil);
+            
+            const usuarioActualizado = { 
+              ...parsedUser, 
+              foto_perfil: nuevaFoto,
+              perfil: {
+                ...parsedUser.perfil,
+                ...perfilData,
+                foto_perfil: nuevaFoto
+              }
+            };
+            
             setUsuario(usuarioActualizado);
             localStorage.setItem("usuario", JSON.stringify(usuarioActualizado));
+            
             cargarBloqueados();
             cargarNoMeInteresa();
           })
           .catch((err) => console.error("Error al cargar perfil:", err))
-          .finally(() => setLoading(false)); // 👈 importante
+          .finally(() => setLoading(false));
       } else {
         setLoading(false);
       }
@@ -124,17 +195,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // -------------------- Login --------------------
   const login = (newToken: string, newUsuario: Usuario) => {
     setToken(newToken);
-    setUsuario(newUsuario);
+    
+    // Procesar foto de perfil con timestamp
+    const usuarioConTimestamp = {
+      ...newUsuario,
+      foto_perfil: getImageUrlWithTimestamp(newUsuario.foto_perfil),
+      perfil: {
+        ...newUsuario.perfil,
+        foto_perfil: getImageUrlWithTimestamp(newUsuario.perfil?.foto_perfil)
+      }
+    };
+    
+    setUsuario(usuarioConTimestamp);
     localStorage.setItem("token", newToken);
-    localStorage.setItem("usuario", JSON.stringify(newUsuario));
+    localStorage.setItem("usuario", JSON.stringify(usuarioConTimestamp));
 
+    // Recargar perfil completo después del login
     getPerfil(newUsuario.id_usuario)
       .then((perfilData) => {
-        let nuevaFoto = perfilData.foto_perfil || newUsuario.foto_perfil;
-        if (nuevaFoto) nuevaFoto = `${nuevaFoto}?t=${new Date().getTime()}`;
-        const usuarioActualizado = { ...newUsuario, foto_perfil: nuevaFoto };
+        const nuevaFoto = getImageUrlWithTimestamp(perfilData.foto_perfil || newUsuario.foto_perfil);
+        const usuarioActualizado = { 
+          ...usuarioConTimestamp, 
+          foto_perfil: nuevaFoto,
+          perfil: {
+            ...usuarioConTimestamp.perfil,
+            ...perfilData,
+            foto_perfil: nuevaFoto
+          }
+        };
+        
         setUsuario(usuarioActualizado);
         localStorage.setItem("usuario", JSON.stringify(usuarioActualizado));
+        
         cargarBloqueados();
         cargarNoMeInteresa();
       })
@@ -151,27 +243,60 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem("usuario");
   };
 
-  // -------------------- Actualizar perfil --------------------
+  // -------------------- Actualizar foto de perfil --------------------
   const actualizarFotoPerfil = (nuevaFoto: string) => {
     if (usuario) {
-      const fotoConTimestamp = `${nuevaFoto}?t=${new Date().getTime()}`;
-      const usuarioActualizado = { ...usuario, foto_perfil: fotoConTimestamp };
+      const fotoConTimestamp = getImageUrlWithTimestamp(nuevaFoto);
+      
+      const usuarioActualizado = { 
+        ...usuario, 
+        foto_perfil: fotoConTimestamp,
+        perfil: {
+          ...usuario.perfil,
+          foto_perfil: fotoConTimestamp
+        }
+      };
+      
       setUsuario(usuarioActualizado);
       localStorage.setItem("usuario", JSON.stringify(usuarioActualizado));
-      setActualizacion((prev) => prev + 1);
+      
+      console.log("✅ Foto de perfil actualizada en AuthContext:", fotoConTimestamp);
+      
+      // Disparar evento global para notificar a todos los componentes
+      window.dispatchEvent(new CustomEvent('fotoPerfilActualizada', {
+        detail: { 
+          nuevaFoto: fotoConTimestamp,
+          idUsuario: usuario.id_usuario 
+        }
+      }));
+      
+      // También forzar actualización del estado
+      setActualizacion(prev => prev + 1);
     }
   };
 
+  // -------------------- Forzar actualización del perfil --------------------
   const forzarActualizacionPerfil = () => {
     if (usuario?.id_usuario && token) {
       getPerfil(usuario.id_usuario)
         .then((perfilData) => {
-          let nuevaFoto = perfilData.foto_perfil || usuario.foto_perfil;
-          if (nuevaFoto) nuevaFoto = `${nuevaFoto}?t=${new Date().getTime()}`;
-          const usuarioActualizado = { ...usuario, foto_perfil: nuevaFoto };
+          const nuevaFoto = getImageUrlWithTimestamp(perfilData.foto_perfil || usuario.foto_perfil);
+          
+          const usuarioActualizado = { 
+            ...usuario, 
+            foto_perfil: nuevaFoto,
+            perfil: {
+              ...usuario.perfil,
+              ...perfilData,
+              foto_perfil: nuevaFoto
+            }
+          };
+          
           setUsuario(usuarioActualizado);
           localStorage.setItem("usuario", JSON.stringify(usuarioActualizado));
           setActualizacion((prev) => prev + 1);
+          
+          console.log("✅ Perfil forzadamente actualizado:", usuarioActualizado);
         })
         .catch((err) => console.error("Error al forzar actualización:", err));
     }
@@ -179,7 +304,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // -------------------- Mientras carga --------------------
   if (loading) {
-    return <div className="text-center p-4">Cargando sesión...</div>; // o spinner
+    return <div className="text-center p-4">Cargando sesión...</div>;
   }
 
   // -------------------- Provider --------------------
@@ -193,6 +318,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         logout,
         actualizarFotoPerfil,
         forzarActualizacionPerfil,
+        recargarPerfilCompleto, // 👈 EXPORTADA
         usuariosBloqueados,
         publicacionesNoMeInteresa,
         cargarBloqueados,
