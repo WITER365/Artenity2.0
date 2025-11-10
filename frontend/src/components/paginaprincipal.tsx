@@ -14,7 +14,14 @@ import {
   Share,
   Bookmark,
   Reply,
-  MoreHorizontal
+  MoreHorizontal,
+  Share2, 
+  Facebook, 
+  Twitter, 
+  Send,
+  X,
+  Users,
+  User
 } from "lucide-react";
 import "../styles/paginaprincipal.css";
 import defaultProfile from "../assets/img/fotoperfildefault.jpg";
@@ -32,7 +39,11 @@ import {
   obtenerComentarios,
   obtenerEstadisticasPublicacion,
   darMeGustaComentario,
-  quitarMeGustaComentario
+  quitarMeGustaComentario,
+  compartirPublicacion,
+  obtenerPublicacionesCompartidas,
+  eliminarCompartido,
+  obtenerAmigos
 } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import NotificacionesPanel from "../components/NotificacionesPanel";
@@ -93,6 +104,20 @@ interface ComentariosResponse {
   total: number;
 }
 
+interface Compartido {
+  id_compartido: number;
+  fecha: string;
+  mensaje: string;
+  tipo: string;
+  publicacion: Publicacion;
+}
+
+interface Amigo {
+  id_usuario: number;
+  nombre_usuario: string;
+  foto_perfil?: string;
+}
+
 export default function PaginaPrincipal() {
   const navigate = useNavigate();
   const { usuario } = useAuth();
@@ -107,6 +132,14 @@ export default function PaginaPrincipal() {
   const [menuAbierto, setMenuAbierto] = useState<number | null>(null);
   const [menuComentarioAbierto, setMenuComentarioAbierto] = useState<number | null>(null);
 
+  // Estados para compartir
+  const [compartirAbierto, setCompartirAbierto] = useState<number | null>(null);
+  const [mensajeCompartir, setMensajeCompartir] = useState("");
+  const [mostrarCompartidos, setMostrarCompartidos] = useState(false);
+  const [publicacionesCompartidas, setPublicacionesCompartidas] = useState<Compartido[]>([]);
+  const [amigos, setAmigos] = useState<Amigo[]>([]);
+  const [compartirConAmigo, setCompartirConAmigo] = useState<number | null>(null);
+
   // ✅ Añadir clase al body
   useEffect(() => {
     document.body.classList.add("pagina-principal");
@@ -114,6 +147,16 @@ export default function PaginaPrincipal() {
       document.body.classList.remove("pagina-principal");
     };
   }, []);
+
+  // ✅ Función para cargar amigos
+  const cargarAmigos = async () => {
+    try {
+      const amigosData = await obtenerAmigos();
+      setAmigos(amigosData);
+    } catch (error) {
+      console.error("Error cargando amigos:", error);
+    }
+  };
 
   // ✅ Función para cargar estadísticas de una publicación
   const cargarEstadisticas = async (idPublicacion: number) => {
@@ -267,6 +310,86 @@ export default function PaginaPrincipal() {
       [idPublicacion]: { contenido: "" }
     }));
   };
+
+  // ✅ Función para compartir publicación
+  const handleCompartir = async (idPublicacion: number, tipo: string = "perfil", idAmigo?: number) => {
+    try {
+      await compartirPublicacion(idPublicacion, mensajeCompartir, tipo, idAmigo);
+      
+      // Mostrar notificación
+      let mensajeNotificacion = 'Publicación compartida exitosamente';
+      if (tipo === 'mensaje' && idAmigo) {
+        const amigo = amigos.find(a => a.id_usuario === idAmigo);
+        mensajeNotificacion = `Publicación compartida con ${amigo?.nombre_usuario || 'tu amigo'}`;
+      }
+      
+      const notificacionEvent = new CustomEvent('nuevaNotificacion', {
+        detail: { mensaje: mensajeNotificacion, tipo: 'exito' }
+      });
+      window.dispatchEvent(notificacionEvent);
+      
+      setCompartirAbierto(null);
+      setMensajeCompartir("");
+      setCompartirConAmigo(null);
+    } catch (error) {
+      console.error("Error compartiendo publicación:", error);
+      const notificacionEvent = new CustomEvent('nuevaNotificacion', {
+        detail: { mensaje: 'Error al compartir publicación', tipo: 'error' }
+      });
+      window.dispatchEvent(notificacionEvent);
+    }
+  };
+
+  // ✅ Función para compartir en redes sociales
+  const compartirEnRedSocial = (redSocial: string, publicacion: Publicacion) => {
+    const texto = `Mira esta publicación de ${publicacion.usuario.nombre_usuario} en Artenity: ${publicacion.contenido.substring(0, 100)}...`;
+    const url = window.location.href;
+    
+    let shareUrl = "";
+    
+    switch (redSocial) {
+      case "whatsapp":
+        shareUrl = `https://wa.me/?text=${encodeURIComponent(texto + " " + url)}`;
+        break;
+      case "facebook":
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(texto)}`;
+        break;
+      case "twitter":
+        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(texto)}&url=${encodeURIComponent(url)}`;
+        break;
+      case "instagram":
+        // Instagram no permite sharing directo, abrir la app
+        shareUrl = `instagram://`;
+        break;
+    }
+    
+    window.open(shareUrl, '_blank', 'width=600,height=400');
+    setCompartirAbierto(null);
+  };
+
+  // ✅ Función para cargar publicaciones compartidas
+  const cargarPublicacionesCompartidas = async () => {
+    try {
+      const compartidos = await obtenerPublicacionesCompartidas();
+      setPublicacionesCompartidas(compartidos);
+    } catch (error) {
+      console.error("Error cargando publicaciones compartidas:", error);
+    }
+  };
+
+  // Efecto para cargar publicaciones compartidas cuando se muestre el panel
+  useEffect(() => {
+    if (mostrarCompartidos) {
+      cargarPublicacionesCompartidas();
+    }
+  }, [mostrarCompartidos]);
+
+  // Cargar amigos cuando se abre el panel de compartir
+  useEffect(() => {
+    if (compartirAbierto) {
+      cargarAmigos();
+    }
+  }, [compartirAbierto]);
 
   // ✅ Componente para mostrar comentarios recursivamente
   const ComentarioComponent = ({ comentario, nivel = 0, idPublicacion }: { comentario: Comentario, nivel?: number, idPublicacion: number }) => {
@@ -512,6 +635,7 @@ export default function PaginaPrincipal() {
     const handleClickOutside = () => {
       setMenuAbierto(null);
       setMenuComentarioAbierto(null);
+      setCompartirAbierto(null);
     };
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
@@ -543,45 +667,53 @@ export default function PaginaPrincipal() {
       </div>
 
       {/* 🔹 Sidebar izquierda */}
-<aside className="sidebar">
-  <div>
-    <div className="text-center text-2xl font-bold mb-8">🎨 Artenity</div>
-    <nav>
-      <ul className="space-y-4">
-        <li>
-          <button className="nav-btn" onClick={() => navigate("/principal")}>
-            <Home /> Home
-          </button>
-        </li>
-        <li>
-          <button className="nav-btn">
-            <Compass /> Explorar
-          </button>
-        </li>
-        <li>
-          <button className="nav-btn">
-            <Grid /> Categorías
-          </button>
-        </li>
-        <li>
-          <button className="nav-btn" onClick={() => navigate("/mensajes")}>
-            <MessageSquare /> Mensajes
-          </button>
-        </li>
-        <li>
-          <button className="nav-btn">
-            <Settings /> Configuración
-          </button>
-        </li>
-        <li>
-          <button className="nav-btn">
-            <Image /> Galería de Arte
-          </button>
-        </li>
-      </ul>
-    </nav>
-  </div>
-</aside>
+      <aside className="sidebar">
+        <div>
+          <div className="text-center text-2xl font-bold mb-8">🎨 Artenity</div>
+          <nav>
+            <ul className="space-y-4">
+              <li>
+                <button className="nav-btn" onClick={() => navigate("/principal")}>
+                  <Home /> Home
+                </button>
+              </li>
+              <li>
+                <button 
+                  className="nav-btn" 
+                  onClick={() => setMostrarCompartidos(!mostrarCompartidos)}
+                >
+                  <Share2 /> Compartidos
+                </button>
+              </li>
+              <li>
+                <button className="nav-btn">
+                  <Compass /> Explorar
+                </button>
+              </li>
+              <li>
+                <button className="nav-btn">
+                  <Grid /> Categorías
+                </button>
+              </li>
+              <li>
+                <button className="nav-btn" onClick={() => navigate("/mensajes")}>
+                  <MessageSquare /> Mensajes
+                </button>
+              </li>
+              <li>
+                <button className="nav-btn">
+                  <Settings /> Configuración
+                </button>
+              </li>
+              <li>
+                <button className="nav-btn">
+                  <Image /> Galería de Arte
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </aside>
 
       {/* 🔹 Sección central */}
       <section className="center-section">
@@ -716,8 +848,14 @@ export default function PaginaPrincipal() {
                   {estadisticas[post.id_publicacion]?.total_comentarios || 0}
                 </button>
                 
-                <button className="action-btn">
-                  <Share size={18} />
+                <button 
+                  className="action-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCompartirAbierto(compartirAbierto === post.id_publicacion ? null : post.id_publicacion);
+                  }}
+                >
+                  <Share2 size={18} />
                 </button>
                 
                 <button 
@@ -735,6 +873,125 @@ export default function PaginaPrincipal() {
                   <Bookmark size={18} />
                 </button>
               </div>
+
+              {/* Panel de compartir */}
+              {compartirAbierto === post.id_publicacion && (
+                <div className="compartir-panel" onClick={(e) => e.stopPropagation()}>
+                  <div className="compartir-header">
+                    <h3>Compartir publicación</h3>
+                    <button 
+                      className="cerrar-compartir"
+                      onClick={() => {
+                        setCompartirAbierto(null);
+                        setCompartirConAmigo(null);
+                        setMensajeCompartir("");
+                      }}
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                  
+                  <div className="redes-sociales">
+                    <button 
+                      className="red-social-btn whatsapp"
+                      onClick={() => compartirEnRedSocial("whatsapp", post)}
+                    >
+                      <MessageCircle size={20} />
+                      WhatsApp
+                    </button>
+                    
+                    <button 
+                      className="red-social-btn facebook"
+                      onClick={() => compartirEnRedSocial("facebook", post)}
+                    >
+                      <Facebook size={20} />
+                      Facebook
+                    </button>
+                    
+                    <button 
+                      className="red-social-btn twitter"
+                      onClick={() => compartirEnRedSocial("twitter", post)}
+                    >
+                      <Twitter size={20} />
+                      Twitter
+                    </button>
+                    
+                    <button 
+                      className="red-social-btn instagram"
+                      onClick={() => compartirEnRedSocial("instagram", post)}
+                    >
+                      <Send size={20} />
+                      Instagram
+                    </button>
+                  </div>
+                  
+                  <div className="compartir-interno">
+                    <h4>Compartir dentro de Artenity</h4>
+                    
+                    {/* Compartir en perfil */}
+                    <div className="opcion-compartir">
+                      <button 
+                        className="btn-compartir-opcion"
+                        onClick={() => handleCompartir(post.id_publicacion, "perfil")}
+                      >
+                        <User size={16} />
+                        Compartir en mi perfil
+                      </button>
+                    </div>
+                    
+                    {/* Compartir con amigos */}
+                    <div className="opcion-compartir">
+                      <div className="amigos-lista">
+                        <h5>Compartir con amigos:</h5>
+                        {amigos.length > 0 ? (
+                          <div className="lista-amigos">
+                            {amigos.map(amigo => (
+                              <button
+                                key={amigo.id_usuario}
+                                className={`btn-amigo ${compartirConAmigo === amigo.id_usuario ? 'seleccionado' : ''}`}
+                                onClick={() => {
+                                  if (compartirConAmigo === amigo.id_usuario) {
+                                    setCompartirConAmigo(null);
+                                  } else {
+                                    setCompartirConAmigo(amigo.id_usuario);
+                                  }
+                                }}
+                              >
+                                <img
+                                  src={amigo.foto_perfil || defaultProfile}
+                                  alt={amigo.nombre_usuario}
+                                  className="foto-amigo"
+                                />
+                                <span>{amigo.nombre_usuario}</span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="sin-amigos">No tienes amigos agregados</p>
+                        )}
+                        
+                        {compartirConAmigo && (
+                          <div className="compartir-amigo-seleccionado">
+                            <textarea
+                              placeholder={`Escribe un mensaje para tu amigo...`}
+                              value={mensajeCompartir}
+                              onChange={(e) => setMensajeCompartir(e.target.value)}
+                              rows={2}
+                            />
+                            <button 
+                              className="btn-compartir-amigo"
+                              onClick={() => handleCompartir(post.id_publicacion, "mensaje", compartirConAmigo)}
+                            >
+                              <Send size={16} />
+                              Enviar a amigo
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Sección de comentarios */}
               {comentariosAbiertos[post.id_publicacion] && (
@@ -800,9 +1057,7 @@ export default function PaginaPrincipal() {
 
       {/* 🔹 Sidebar derecha */}
       <aside className="right-sidebar">
-        <div className="card">
-          <h2>COMUNIDADES A SEGUIR</h2>
-        </div>
+        
         <div className="card">
           <h2>LO QUE SUCEDE CON EL MUNDO DEL ARTE</h2>
         </div>
@@ -810,6 +1065,95 @@ export default function PaginaPrincipal() {
           <h2>A QUIÉN SEGUIR</h2>
         </div>
       </aside>
+
+      {/* Panel de publicaciones compartidas */}
+      {mostrarCompartidos && (
+        <div className="panel-compartidos-overlay" onClick={() => setMostrarCompartidos(false)}>
+          <div className="panel-compartidos" onClick={(e) => e.stopPropagation()}>
+            <div className="panel-compartidos-header">
+              <h2>Publicaciones Compartidas</h2>
+              <button 
+                className="cerrar-panel"
+                onClick={() => setMostrarCompartidos(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="lista-compartidos">
+              {publicacionesCompartidas.length > 0 ? (
+                publicacionesCompartidas.map((compartido) => (
+                  <div key={compartido.id_compartido} className="compartido-item">
+                    <div className="compartido-header">
+                      <div>
+                        <span className="fecha-compartido">
+                          Compartido el {new Date(compartido.fecha).toLocaleString()}
+                        </span>
+                        <span className="tipo-compartido">
+                          {compartido.tipo === 'perfil' ? 'En tu perfil' : 
+                           compartido.tipo === 'mensaje' ? 'Con un amigo' : 'Compartido'}
+                        </span>
+                      </div>
+                      <button 
+                        className="eliminar-compartido"
+                        onClick={async () => {
+                          try {
+                            await eliminarCompartido(compartido.id_compartido);
+                            cargarPublicacionesCompartidas();
+                          } catch (error) {
+                            console.error("Error eliminando compartido:", error);
+                          }
+                        }}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                    
+                    {compartido.mensaje && (
+                      <p className="mensaje-compartido">"{compartido.mensaje}"</p>
+                    )}
+                    
+                    <div className="publicacion-compartida">
+                      <div className="post-header">
+                        <img
+                          src={
+                            compartido.publicacion.usuario?.perfil?.foto_perfil &&
+                            compartido.publicacion.usuario.perfil.foto_perfil.trim() !== ""
+                              ? compartido.publicacion.usuario.perfil.foto_perfil
+                              : defaultProfile
+                          }
+                          alt="foto de perfil"
+                          className="foto-perfil-post"
+                        />
+                        <div className="user-info">
+                          <span className="username">
+                            {compartido.publicacion.usuario?.nombre_usuario || "Usuario"}
+                          </span>
+                          <span className="timestamp">
+                            {new Date(compartido.publicacion.fecha_creacion).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="post-content">
+                        <p>{compartido.publicacion.contenido}</p>
+                        {compartido.publicacion.imagen && (
+                          <img src={compartido.publicacion.imagen} alt="post" className="post-image" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="sin-compartidos">
+                  <Share2 size={48} />
+                  <p>No has compartido ninguna publicación aún</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
