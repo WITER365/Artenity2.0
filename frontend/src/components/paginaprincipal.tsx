@@ -949,13 +949,7 @@ const handleCompartir = async (idPublicacion: number, tipo: string = "perfil") =
                       Twitter
                     </button>
                     
-                    <button 
-                      className="red-social-btn instagram"
-                      onClick={() => compartirEnRedSocial("instagram", post)}
-                    >
-                      <Send size={20} />
-                      Instagram
-                    </button>
+                   
                   </div>
 
                   {/* Compartir dentro de la aplicación */}
