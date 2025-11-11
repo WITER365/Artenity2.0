@@ -1659,6 +1659,7 @@ def obtener_estadisticas_me_gustas(id_usuario: int, db: Session = Depends(get_db
 
 
 # ------------------ COMPARTIR PUBLICACIÓN ------------------
+# ------------------ COMPARTIR PUBLICACIÓN ------------------
 @app.post("/compartir/{id_publicacion}")
 def compartir_publicacion(
     id_publicacion: int,
@@ -1667,7 +1668,6 @@ def compartir_publicacion(
     amigos_ids: str = Form(None),
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user_id)
-
 ):
     try:
         # Verificar si la publicación existe
@@ -1677,16 +1677,6 @@ def compartir_publicacion(
         
         if not publicacion:
             raise HTTPException(status_code=404, detail="Publicación no encontrada")
-        
-        # Verificar si ya se compartió esta publicación (evitar duplicados)
-        compartido_existente = db.query(models.Compartido).filter(
-            models.Compartido.id_usuario == user_id,
-            models.Compartido.id_publicacion == id_publicacion,
-            models.Compartido.tipo == tipo
-        ).first()
-        
-        if compartido_existente:
-            raise HTTPException(status_code=400, detail="Ya compartiste esta publicación")
         
         # Crear el compartido principal
         nuevo_compartido = models.Compartido(
@@ -1700,22 +1690,25 @@ def compartir_publicacion(
         db.commit()
         db.refresh(nuevo_compartido)
         
-        # Crear notificación para el dueño de la publicación (si no es el mismo usuario)
+        # Obtener usuario actual
+        usuario_actual = db.query(models.Usuario).filter(models.Usuario.id_usuario == user_id).first()
+        
+        # 🔥 CREAR NOTIFICACIONES - CORREGIDO
+        
+        # 1. Notificación para el dueño de la publicación (si no es el mismo usuario)
         if publicacion.id_usuario != user_id:
-            usuario_actual = db.query(models.Usuario).filter(models.Usuario.id_usuario == user_id).first()
-            notificacion = models.Notificacion(
+            notificacion_propietario = models.Notificacion(
                 id_usuario=publicacion.id_usuario,
                 tipo="compartido",
                 mensaje=f"@{usuario_actual.nombre_usuario} compartió tu publicación",
                 leido=False,
                 id_referencia=id_publicacion
             )
-            db.add(notificacion)
+            db.add(notificacion_propietario)
         
-        # Si es compartir con amigos específicos, crear notificaciones para cada amigo
+        # 2. Si es compartir con amigos específicos, crear notificaciones para cada amigo
         if tipo == "amigos" and amigos_ids:
             amigos_ids_list = [int(id_str) for id_str in amigos_ids.split(",") if id_str.strip()]
-            usuario_actual = db.query(models.Usuario).filter(models.Usuario.id_usuario == user_id).first()
             
             for amigo_id in amigos_ids_list:
                 # Verificar que realmente son amigos
@@ -1728,7 +1721,7 @@ def compartir_publicacion(
                 if amistad:
                     notificacion_amigo = models.Notificacion(
                         id_usuario=amigo_id,
-                        tipo="compartido_amigo",
+                        tipo="compartido_amigo", 
                         mensaje=f"@{usuario_actual.nombre_usuario} te compartió una publicación",
                         leido=False,
                         id_referencia=id_publicacion

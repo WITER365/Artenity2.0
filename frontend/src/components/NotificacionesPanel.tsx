@@ -141,28 +141,41 @@ export default function NotificacionesPanel({ usuario }: { usuario: any }) {
             </section>
           )}
 
-       <section>
-  <h4>Otras notificaciones</h4>
+    <section>
+  <h4>Actividad reciente</h4>
   {notificaciones.length > 0 ? (
     notificaciones.map((n) => (
       <div
         key={n.id_notificacion}
         className={`notificacion ${n.leida ? "leida" : "no-leida"}`}
       >
-        <p>{n.mensaje}</p>
-        <span className="fecha">
-          {new Date(n.fecha_creacion).toLocaleString()}
-        </span>
-        {/* Mostrar tipo de notificación */}
-        {n.tipo && (
-          <span className={`tipo-notificacion ${n.tipo}`}>
+        <div className="notificacion-contenido">
+          {/* Icono según el tipo */}
+          <span className="notificacion-icono">
             {n.tipo === 'compartido' && '📤'}
             {n.tipo === 'compartido_amigo' && '👥'}
             {n.tipo === 'me_gusta' && '❤️'}
             {n.tipo === 'comentario' && '💬'}
+            {n.tipo === 'comentario_respuesta' && '💬'}
+            {n.tipo === 'solicitud_amistad' && '👋'}
+            {n.tipo === 'amistad_aceptada' && '✅'}
+            {n.tipo === 'amistad_rechazada' && '❌'}
             {n.tipo === 'nuevo_seguidor' && '👤'}
+            {!['compartido', 'compartido_amigo', 'me_gusta', 'comentario', 'comentario_respuesta', 'solicitud_amistad', 'amistad_aceptada', 'amistad_rechazada', 'nuevo_seguidor'].includes(n.tipo) && '🔔'}
           </span>
-        )}
+          
+          <div className="notificacion-texto">
+            <p>{n.mensaje}</p>
+            <span className="fecha-notificacion">
+              {new Date(n.fecha_creacion).toLocaleDateString('es-ES', {
+                day: 'numeric',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </span>
+          </div>
+        </div>
       </div>
     ))
   ) : (

@@ -235,7 +235,7 @@ class Compartido(Base):
     id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario", ondelete="CASCADE"), nullable=False)
     id_publicacion = Column(Integer, ForeignKey("publicaciones.id_publicacion", ondelete="CASCADE"), nullable=False)
     # Elimina o comenta la columna 'tipo' si no existe en la BD
-    # tipo = Column(String(50), nullable=False)
+    tipo = Column(String(50), nullable=False)
     mensaje = Column(Text, nullable=True)  # Cambia a nullable=True si es necesario
     fecha = Column(DateTime, default=datetime.utcnow)
 
