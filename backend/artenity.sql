@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 06-11-2025 a las 20:55:05
+-- Tiempo de generación: 12-11-2025 a las 17:51:06
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -246,6 +246,21 @@ INSERT INTO `colecciones_obras` (`id`, `id_coleccion`, `id_publicacion`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Estructura de tabla para la tabla `comentarios`
+--
+
+CREATE TABLE `comentarios` (
+  `id_comentario` int(11) NOT NULL,
+  `id_usuario` int(11) DEFAULT NULL,
+  `id_publicacion` int(11) DEFAULT NULL,
+  `id_comentario_padre` int(11) DEFAULT NULL,
+  `contenido` varchar(500) NOT NULL,
+  `fecha` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Estructura de tabla para la tabla `comentarios_obra`
 --
 
@@ -297,6 +312,21 @@ INSERT INTO `comentarios_obra` (`id_comentario`, `id_usuario`, `id_publicacion`,
 (28, 29, 27, 'Me gusta el diseño', '2025-01-12 12:20:00', NULL, 'me gusta', 'visible', 0, 0),
 (29, 30, 28, 'Textura muy bien lograda', '2025-01-12 12:30:00', NULL, 'me encanta', 'visible', 0, 0),
 (30, 1, 1, 'Gracias por compartir', '2025-01-12 12:40:00', 1, 'me gusta', 'visible', 0, 0);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `compartidos`
+--
+
+CREATE TABLE `compartidos` (
+  `id_compartido` int(11) NOT NULL,
+  `id_usuario` int(11) NOT NULL,
+  `id_publicacion` int(11) NOT NULL,
+  `tipo` varchar(50) NOT NULL,
+  `mensaje` text DEFAULT NULL,
+  `fecha` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -400,6 +430,19 @@ INSERT INTO `galeria_arte` (`id_galeria`, `id_publicacion`, `tipo`, `fecha_agreg
 (28, 28, 'recomendada', '2025-01-18 10:15:00'),
 (29, 29, 'destacada', '2025-01-18 10:20:00'),
 (30, 30, 'nueva', '2025-01-18 10:25:00');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `guardados`
+--
+
+CREATE TABLE `guardados` (
+  `id_guardado` int(11) NOT NULL,
+  `id_usuario` int(11) DEFAULT NULL,
+  `id_publicacion` int(11) DEFAULT NULL,
+  `fecha` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -600,6 +643,32 @@ INSERT INTO `mensajes_privados` (`id_mensaje`, `id_emisor`, `id_receptor`, `cont
 (28, 28, 27, 'Gracias, lo actualizo cada semana.', '2025-01-08 23:10:00', 1),
 (29, 29, 30, '¿Qué piensas de mi obra?', '2025-01-09 00:00:00', 0),
 (30, 30, 29, 'Tiene mucha fuerza visual.', '2025-01-09 00:10:00', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `me_gusta`
+--
+
+CREATE TABLE `me_gusta` (
+  `id_megusta` int(11) NOT NULL,
+  `id_usuario` int(11) DEFAULT NULL,
+  `id_publicacion` int(11) DEFAULT NULL,
+  `fecha` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `me_gusta_comentarios`
+--
+
+CREATE TABLE `me_gusta_comentarios` (
+  `id_megusta_comentario` int(11) NOT NULL,
+  `id_usuario` int(11) DEFAULT NULL,
+  `id_comentario` int(11) DEFAULT NULL,
+  `fecha` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -1133,6 +1202,16 @@ ALTER TABLE `colecciones_obras`
   ADD KEY `id_publicacion` (`id_publicacion`);
 
 --
+-- Indices de la tabla `comentarios`
+--
+ALTER TABLE `comentarios`
+  ADD PRIMARY KEY (`id_comentario`),
+  ADD KEY `id_usuario` (`id_usuario`),
+  ADD KEY `id_publicacion` (`id_publicacion`),
+  ADD KEY `id_comentario_padre` (`id_comentario_padre`),
+  ADD KEY `ix_comentarios_id_comentario` (`id_comentario`);
+
+--
 -- Indices de la tabla `comentarios_obra`
 --
 ALTER TABLE `comentarios_obra`
@@ -1140,6 +1219,15 @@ ALTER TABLE `comentarios_obra`
   ADD KEY `id_usuario` (`id_usuario`),
   ADD KEY `id_publicacion` (`id_publicacion`),
   ADD KEY `id_comentario_padre` (`id_comentario_padre`);
+
+--
+-- Indices de la tabla `compartidos`
+--
+ALTER TABLE `compartidos`
+  ADD PRIMARY KEY (`id_compartido`),
+  ADD KEY `id_usuario` (`id_usuario`),
+  ADD KEY `id_publicacion` (`id_publicacion`),
+  ADD KEY `ix_compartidos_id_compartido` (`id_compartido`);
 
 --
 -- Indices de la tabla `configuracion_usuario`
@@ -1154,6 +1242,15 @@ ALTER TABLE `configuracion_usuario`
 ALTER TABLE `galeria_arte`
   ADD PRIMARY KEY (`id_galeria`),
   ADD KEY `id_publicacion` (`id_publicacion`);
+
+--
+-- Indices de la tabla `guardados`
+--
+ALTER TABLE `guardados`
+  ADD PRIMARY KEY (`id_guardado`),
+  ADD KEY `id_usuario` (`id_usuario`),
+  ADD KEY `id_publicacion` (`id_publicacion`),
+  ADD KEY `ix_guardados_id_guardado` (`id_guardado`);
 
 --
 -- Indices de la tabla `guardados_obra`
@@ -1186,6 +1283,24 @@ ALTER TABLE `mensajes_privados`
   ADD PRIMARY KEY (`id_mensaje`),
   ADD KEY `id_emisor` (`id_emisor`),
   ADD KEY `id_receptor` (`id_receptor`);
+
+--
+-- Indices de la tabla `me_gusta`
+--
+ALTER TABLE `me_gusta`
+  ADD PRIMARY KEY (`id_megusta`),
+  ADD KEY `id_usuario` (`id_usuario`),
+  ADD KEY `id_publicacion` (`id_publicacion`),
+  ADD KEY `ix_me_gusta_id_megusta` (`id_megusta`);
+
+--
+-- Indices de la tabla `me_gusta_comentarios`
+--
+ALTER TABLE `me_gusta_comentarios`
+  ADD PRIMARY KEY (`id_megusta_comentario`),
+  ADD KEY `id_usuario` (`id_usuario`),
+  ADD KEY `id_comentario` (`id_comentario`),
+  ADD KEY `ix_me_gusta_comentarios_id_megusta_comentario` (`id_megusta_comentario`);
 
 --
 -- Indices de la tabla `notificaciones`
@@ -1289,6 +1404,36 @@ ALTER TABLE `bloqueos_usuarios`
   MODIFY `id_bloqueo` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
+-- AUTO_INCREMENT de la tabla `comentarios`
+--
+ALTER TABLE `comentarios`
+  MODIFY `id_comentario` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de la tabla `compartidos`
+--
+ALTER TABLE `compartidos`
+  MODIFY `id_compartido` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de la tabla `guardados`
+--
+ALTER TABLE `guardados`
+  MODIFY `id_guardado` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de la tabla `me_gusta`
+--
+ALTER TABLE `me_gusta`
+  MODIFY `id_megusta` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de la tabla `me_gusta_comentarios`
+--
+ALTER TABLE `me_gusta_comentarios`
+  MODIFY `id_megusta_comentario` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT de la tabla `notificaciones`
 --
 ALTER TABLE `notificaciones`
@@ -1359,6 +1504,42 @@ ALTER TABLE `amistades`
 ALTER TABLE `bloqueos_usuarios`
   ADD CONSTRAINT `bloqueos_usuarios_ibfk_1` FOREIGN KEY (`id_bloqueador`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE,
   ADD CONSTRAINT `bloqueos_usuarios_ibfk_2` FOREIGN KEY (`id_bloqueado`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE;
+
+--
+-- Filtros para la tabla `comentarios`
+--
+ALTER TABLE `comentarios`
+  ADD CONSTRAINT `comentarios_ibfk_1` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE,
+  ADD CONSTRAINT `comentarios_ibfk_2` FOREIGN KEY (`id_publicacion`) REFERENCES `publicaciones` (`id_publicacion`) ON DELETE CASCADE,
+  ADD CONSTRAINT `comentarios_ibfk_3` FOREIGN KEY (`id_comentario_padre`) REFERENCES `comentarios` (`id_comentario`);
+
+--
+-- Filtros para la tabla `compartidos`
+--
+ALTER TABLE `compartidos`
+  ADD CONSTRAINT `compartidos_ibfk_1` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE,
+  ADD CONSTRAINT `compartidos_ibfk_2` FOREIGN KEY (`id_publicacion`) REFERENCES `publicaciones` (`id_publicacion`) ON DELETE CASCADE;
+
+--
+-- Filtros para la tabla `guardados`
+--
+ALTER TABLE `guardados`
+  ADD CONSTRAINT `guardados_ibfk_1` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE,
+  ADD CONSTRAINT `guardados_ibfk_2` FOREIGN KEY (`id_publicacion`) REFERENCES `publicaciones` (`id_publicacion`) ON DELETE CASCADE;
+
+--
+-- Filtros para la tabla `me_gusta`
+--
+ALTER TABLE `me_gusta`
+  ADD CONSTRAINT `me_gusta_ibfk_1` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE,
+  ADD CONSTRAINT `me_gusta_ibfk_2` FOREIGN KEY (`id_publicacion`) REFERENCES `publicaciones` (`id_publicacion`) ON DELETE CASCADE;
+
+--
+-- Filtros para la tabla `me_gusta_comentarios`
+--
+ALTER TABLE `me_gusta_comentarios`
+  ADD CONSTRAINT `me_gusta_comentarios_ibfk_1` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE,
+  ADD CONSTRAINT `me_gusta_comentarios_ibfk_2` FOREIGN KEY (`id_comentario`) REFERENCES `comentarios` (`id_comentario`) ON DELETE CASCADE;
 
 --
 -- Filtros para la tabla `no_me_interesa`
