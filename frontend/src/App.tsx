@@ -56,11 +56,11 @@ function App() {
         element={token ? <Messages /> : <Navigate to="/login" />}
       />
 
-      {/* 🔥 Nueva ruta para ver publicaciones compartidas */}
-      <Route
-        path="/compartidos"
-        element={token ? <CompartidosPage /> : <Navigate to="/login" />}
-      />
+      
+     <Route
+  path="/compartidos"
+  element={token ? <CompartidosPage /> : <Navigate to="/login" />}
+/>
 
       {/* Ruta fallback */}
       <Route path="*" element={<Navigate to="/login" />} />

@@ -160,6 +160,15 @@ export default function PaginaPrincipal() {
     }
   };
 
+// En tu PaginaPrincipal.tsx, asegúrate de tener esta función:
+const verCompartidoEspecifico = (compartido: Compartido) => {
+  navigate("/compartidos", { 
+    state: { 
+      compartidoEspecifico: compartido 
+    } 
+    
+  });
+};
   // ✅ Función para cargar estadísticas de una publicación
   const cargarEstadisticas = async (idPublicacion: number) => {
     try {
@@ -314,13 +323,29 @@ export default function PaginaPrincipal() {
   };
 
 
-  // ✅ Función para compartir publicación
-// ✅ Función para compartir publicación
 const handleCompartir = async (idPublicacion: number, tipo: string = "perfil") => {
   try {
-    await compartirPublicacion(idPublicacion, mensajeCompartir, tipo, amigosSeleccionados);
+    console.log(`Compartiendo publicación ${idPublicacion} con tipo: ${tipo}`);
     
-    // Mostrar notificación
+    // Preparar datos para compartir
+    let amigosIdsParam: number[] = [];
+    
+    if (tipo === "amigos" && amigosSeleccionados.length > 0) {
+      amigosIdsParam = amigosSeleccionados;
+      console.log(`Compartiendo con ${amigosIdsParam.length} amigos:`, amigosIdsParam);
+    }
+    
+    // Llamar a la API
+    const resultado = await compartirPublicacion(
+      idPublicacion, 
+      mensajeCompartir, 
+      tipo, 
+      amigosIdsParam
+    );
+    
+    console.log("✅ Publicación compartida exitosamente:", resultado);
+    
+    // Mostrar notificación de éxito
     const notificacionEvent = new CustomEvent('nuevaNotificacion', {
       detail: { 
         mensaje: tipo === 'amigos' 
@@ -331,6 +356,7 @@ const handleCompartir = async (idPublicacion: number, tipo: string = "perfil") =
     });
     window.dispatchEvent(notificacionEvent);
     
+    // Limpiar estados
     setCompartirAbierto(null);
     setMensajeCompartir("");
     setAmigosSeleccionados([]);
@@ -342,11 +368,13 @@ const handleCompartir = async (idPublicacion: number, tipo: string = "perfil") =
     }
     
   } catch (error: any) {
-    console.error("Error compartiendo publicación:", error);
+    console.error("❌ Error compartiendo publicación:", error);
     let mensajeError = 'Error al compartir publicación';
     
     if (error.response?.data?.detail) {
       mensajeError = error.response.data.detail;
+    } else if (error.message) {
+      mensajeError = error.message;
     }
     
     const notificacionEvent = new CustomEvent('nuevaNotificacion', {
@@ -355,32 +383,43 @@ const handleCompartir = async (idPublicacion: number, tipo: string = "perfil") =
     window.dispatchEvent(notificacionEvent);
   }
 };
-  // ✅ Función para compartir en redes sociales
-  const compartirEnRedSocial = (redSocial: string, publicacion: Publicacion) => {
-    const texto = `Mira esta publicación de ${publicacion.usuario.nombre_usuario} en Artenity: ${publicacion.contenido.substring(0, 100)}...`;
-    const url = window.location.href;
-    
-    let shareUrl = "";
-    
-    switch (redSocial) {
-      case "whatsapp":
-        shareUrl = `https://wa.me/?text=${encodeURIComponent(texto + " " + url)}`;
-        break;
-      case "facebook":
-        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(texto)}`;
-        break;
-      case "twitter":
-        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(texto)}&url=${encodeURIComponent(url)}`;
-        break;
-      case "instagram":
-        // Instagram no permite sharing directo, abrir la app
-        shareUrl = `instagram://`;
-        break;
+
+// También actualiza la función de compartir en redes sociales:
+const compartirEnRedSocial = (redSocial: string, publicacion: Publicacion) => {
+  const texto = `Mira esta publicación de ${publicacion.usuario.nombre_usuario} en Artenity: ${publicacion.contenido.substring(0, 100)}...`;
+  const url = `${window.location.origin}/publicacion/${publicacion.id_publicacion}`;
+  
+  let shareUrl = "";
+  
+  switch (redSocial) {
+    case "whatsapp":
+      shareUrl = `https://wa.me/?text=${encodeURIComponent(texto + " " + url)}`;
+      break;
+    case "facebook":
+      shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(texto)}`;
+      break;
+    case "twitter":
+      shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(texto)}&url=${encodeURIComponent(url)}`;
+      break;
+    case "linkedin":
+      shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+      break;
+    default:
+      console.warn("Red social no soportada:", redSocial);
+      return;
+  }
+  
+  window.open(shareUrl, '_blank', 'width=600,height=400');
+  setCompartirAbierto(null);
+
+   const notificacionEvent = new CustomEvent('nuevaNotificacion', {
+    detail: { 
+      mensaje: `Compartido en ${redSocial}`, 
+      tipo: 'info' 
     }
-    
-    window.open(shareUrl, '_blank', 'width=600,height=400');
-    setCompartirAbierto(null);
-  };
+  });
+  window.dispatchEvent(notificacionEvent);
+};
 
   // ✅ Función para cargar publicaciones compartidas
   const cargarPublicacionesCompartidas = async () => {

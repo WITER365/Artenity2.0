@@ -1,354 +1,274 @@
-/* src/styles/compartidos.css */
-.compartidos-page {
+/* Estilos específicos para vista de compartido único */
+.compartidos-center-especifico {
   max-width: 800px;
   margin: 0 auto;
-  padding: 20px;
-  background: white;
-  min-height: 100vh;
 }
 
-.compartidos-header {
+.compartidos-header-especifico {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 15px;
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 1rem 0;
+  border-bottom: 1px solid #e1e8ed;
+  margin-bottom: 2rem;
 }
 
-.btn-volver {
+.btn-volver-especifico {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: none;
-  border: none;
-  color: #666;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
   cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 5px;
-  transition: background-color 0.2s;
-}
-
-.btn-volver:hover {
-  background-color: #f5f5f5;
-}
-
-.compartidos-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-  color: #333;
-}
-
-.compartidos-pestanas {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.pestana {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: none;
-  border: none;
-  padding: 12px 20px;
-  color: #666;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
   transition: all 0.2s;
-  position: relative;
 }
 
-.pestana:hover {
-  color: #333;
-  background-color: #f8f9fa;
+.btn-volver-especifico:hover {
+  background: #e9ecef;
 }
 
-.pestana.activa {
-  color: #3498db;
-  border-bottom-color: #3498db;
-  background-color: #f8f9fa;
+.compartido-especifico-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #6c757d;
+  font-size: 0.9rem;
 }
 
-.pestana-count {
-  background: #e74c3c;
-  color: white;
-  border-radius: 12px;
-  padding: 2px 8px;
-  font-size: 0.8rem;
-  min-width: 20px;
-  text-align: center;
-}
-
-.compartidos-content {
-  margin-top: 20px;
-}
-
-.cargando {
-  text-align: center;
-  padding: 40px;
-  color: #666;
-  font-style: italic;
-}
-
-/* Tarjeta de compartido */
-.compartido-card {
+.compartido-especifico-container {
   background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 10px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   overflow: hidden;
 }
 
-.compartido-header {
+.compartido-especifico-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 15px;
+  padding: 1.5rem;
   background: #f8f9fa;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e1e8ed;
 }
 
-.compartido-info {
-  flex: 1;
-}
-
-.usuario-compartio {
+.compartido-especifico-info {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
+  align-items: flex-start;
+  gap: 1rem;
 }
 
-.foto-perfil-compartio {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.compartio-details {
+.compartido-especifico-details .user-info {
   display: flex;
   flex-direction: column;
+  gap: 0.25rem;
 }
 
-.compartio-nombre {
-  font-weight: bold;
-  color: #333;
-}
-
-.compartio-accion {
+.compartido-texto {
+  color: #6c757d;
   font-size: 0.9rem;
-  color: #666;
 }
 
-.compartio-fecha {
-  font-size: 0.8rem;
-  color: #999;
-}
-
-.mensaje-compartido {
-  margin: 8px 0 0 0;
-  padding: 10px;
-  background: white;
-  border-radius: 5px;
-  border-left: 3px solid #3498db;
-  font-style: italic;
-  color: #555;
-}
-
-.btn-eliminar-compartido {
+.btn-eliminar-especifico {
   background: none;
   border: none;
-  color: #999;
+  color: #dc3545;
   cursor: pointer;
-  padding: 5px;
-  border-radius: 3px;
-  transition: all 0.2s;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: background 0.2s;
 }
 
-.btn-eliminar-compartido:hover {
-  color: #e74c3c;
-  background-color: #ffeaea;
+.btn-eliminar-especifico:hover {
+  background: rgba(220, 53, 69, 0.1);
 }
 
-/* Publicación compartida */
-.publicacion-compartida {
-  padding: 15px;
+.compartido-mensaje-especifico {
+  padding: 1rem 1.5rem;
+  background: #fff3cd;
+  border-left: 4px solid #ffc107;
+  margin: 0 1.5rem;
+  border-radius: 4px;
 }
 
-.post-header {
+.compartido-mensaje-especifico p {
+  margin: 0;
+  font-style: italic;
+  color: #856404;
+}
+
+.publicacion-original-especifica {
+  padding: 1.5rem;
+}
+
+.post-header-especifico {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
-.foto-perfil-post {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
+.post-content-especifico p {
+  font-size: 1.1rem;
+  line-height: 1.5;
+  margin-bottom: 1rem;
 }
 
-.user-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.username {
-  font-weight: bold;
-  color: #333;
-}
-
-.timestamp {
-  font-size: 0.8rem;
-  color: #999;
-}
-
-.post-content {
-  margin-bottom: 15px;
-}
-
-.post-content p {
-  margin: 0 0 10px 0;
-  line-height: 1.4;
-  color: #333;
-}
-
-.post-image {
+.post-image-especifico {
   width: 100%;
-  max-height: 400px;
-  object-fit: cover;
-  border-radius: 5px;
-  margin-top: 10px;
+  max-height: 500px;
+  object-fit: contain;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s;
 }
 
-.post-stats {
+.post-image-especifico:hover {
+  transform: scale(1.02);
+}
+
+.publicacion-stats-especifico {
   display: flex;
-  gap: 15px;
-  padding: 10px 0;
-  border-bottom: 1px solid #e0e0e0;
-  color: #666;
+  gap: 1.5rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid #e1e8ed;
+  color: #6c757d;
   font-size: 0.9rem;
 }
 
-.post-actions {
+.post-actions-especifico {
   display: flex;
   justify-content: space-around;
-  padding: 10px 0;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 1rem 0;
+  border-bottom: 1px solid #e1e8ed;
 }
 
-.action-btn {
+.post-actions-especifico .action-btn {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 0.5rem;
   background: none;
   border: none;
-  color: #666;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
   cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 5px;
   transition: all 0.2s;
   font-size: 0.9rem;
 }
 
-.action-btn:hover {
-  background-color: #f5f5f5;
-  color: #333;
+.post-actions-especifico .action-btn:hover {
+  background: #f8f9fa;
 }
 
-.action-btn.liked {
-  color: #e74c3c;
+.post-actions-especifico .action-btn.liked {
+  color: #e91e63;
 }
 
-.action-btn.saved {
-  color: #f39c12;
+.post-actions-especifico .action-btn.saved {
+  color: #ff9800;
 }
 
-/* Sección de comentarios */
-.comentarios-section {
-  padding-top: 15px;
-  border-top: 1px solid #f0f0f0;
+.comentarios-section-especifico {
+  padding-top: 1.5rem;
 }
 
-.nuevo-comentario {
+.comentarios-lista-especifico {
+  max-height: 400px;
+  overflow-y: auto;
+  margin-bottom: 1.5rem;
+}
+
+.comentario-especifico {
   display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f1f3f4;
 }
 
-.nuevo-comentario input {
+.comentario-especifico:last-child {
+  border-bottom: none;
+}
+
+.nuevo-comentario-especifico {
+  display: flex;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e1e8ed;
+}
+
+.nuevo-comentario-especifico input {
   flex: 1;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 20px;
-  outline: none;
+  padding: 0.75rem;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
   font-size: 0.9rem;
 }
 
-.nuevo-comentario input:focus {
-  border-color: #3498db;
-}
-
-.btn-comentar {
-  padding: 10px 20px;
-  background: #3498db;
+.btn-comentar-especifico {
+  padding: 0.75rem 1.5rem;
+  background: #007bff;
   color: white;
   border: none;
-  border-radius: 20px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.2s;
   font-size: 0.9rem;
+  transition: background 0.2s;
 }
 
-.btn-comentar:hover {
-  background: #2980b9;
+.btn-comentar-especifico:hover:not(:disabled) {
+  background: #0056b3;
 }
 
-/* Sin compartidos */
-.sin-compartidos {
+.btn-comentar-especifico:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+.sin-comentarios-especifico {
   text-align: center;
-  padding: 60px 20px;
-  color: #666;
+  padding: 2rem;
+  color: #6c757d;
 }
 
-.sin-compartidos h3 {
-  margin: 20px 0 10px 0;
-  color: #333;
+/* Estados de carga y error */
+.cargando-especifico {
+  text-align: center;
+  padding: 3rem;
 }
 
-.sin-compartidos p {
-  margin: 0;
-  line-height: 1.5;
+.spinner {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #007bff;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .compartidos-page {
-    padding: 10px;
-  }
-  
-  .compartidos-pestanas {
-    flex-direction: column;
-  }
-  
-  .compartido-header {
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .post-actions {
-    flex-wrap: wrap;
-    gap: 5px;
-  }
-  
-  .action-btn {
-    flex: 1;
-    min-width: 100px;
-    justify-content: center;
-  }
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
+
+.error-especifico, .sin-compartido-especifico {
+  text-align: center;
+  padding: 3rem;
+  color: #6c757d;
+}
+
+.btn-volver-error {
+  padding: 0.75rem 1.5rem;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 1rem;
+}
+
+.btn-volver-error:hover {
+  background: #0056b3;
+}
+

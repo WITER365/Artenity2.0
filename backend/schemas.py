@@ -216,17 +216,23 @@ class CompartidoResponse(BaseModel):
         from_attributes = True
 
 
-class CompartidoConPublicacionResponse(BaseModel):
+# backend/schemas.py - AGREGAR ESTOS ESQUEMAS
+
+class CompartidoBase(BaseModel):
+    id_usuario: int
+    id_publicacion: int
+    tipo: str
+    mensaje: Optional[str] = None
+    expiracion: Optional[datetime] = None
+
+class CompartidoResponse(BaseModel):
     id_compartido: int
-    fecha: datetime
+    fecha_compartido: str
     mensaje: Optional[str]
     tipo: str
-    expiracion: datetime
-    tiempo_restante: Optional[dict] = None
-    usuario_compartio: UsuarioPerfil
-    publicacion: PublicacionResponse
+    expiracion: Optional[str]
+    usuario_compartio: dict
+    publicacion: dict
 
     class Config:
         from_attributes = True
-
-    
