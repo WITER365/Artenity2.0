@@ -1056,171 +1056,249 @@ const compartirEnRedSocial = (redSocial: string, publicacion: Publicacion) => {
                 )}
               </div>
 
-              {/* Botones de acción */}
-              <div className="post-actions">
-                <button 
-                  className="action-btn"
-                  onClick={() => toggleComentarios(post.id_publicacion)}
-                >
-                  <MessageCircle size={18} />
-                  {estadisticas[post.id_publicacion]?.total_comentarios || 0}
-                </button>
-                
-                <button 
-                  className="action-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setCompartirAbierto(compartirAbierto === post.id_publicacion ? null : post.id_publicacion);
-                  }}
-                >
-                  <Share2 size={18} />
-                </button>
-                
-                <button 
-                  className={`action-btn ${estadisticas[post.id_publicacion]?.me_gusta_dado ? 'liked' : ''}`}
-                  onClick={() => handleMeGusta(post.id_publicacion)}
-                >
-                  <Heart size={18} />
-                  {estadisticas[post.id_publicacion]?.total_me_gusta || 0}
-                </button>
-                
-                <button 
-                  className={`action-btn ${estadisticas[post.id_publicacion]?.guardado ? 'saved' : ''}`}
-                  onClick={() => handleGuardar(post.id_publicacion)}
-                >
-                  <Bookmark size={18} />
-                </button>
+              <div className="post-actions-x">
+  <button 
+    className="action-btn-x comment-btn"
+    onClick={() => toggleComentarios(post.id_publicacion)}
+  >
+    <div className="btn-content">
+      <MessageCircle size={18} />
+      <span className="count">{estadisticas[post.id_publicacion]?.total_comentarios || 0}</span>
+    </div>
+  </button>
+  
+  <button 
+    className="action-btn-x retweet-btn"
+    onClick={(e) => {
+      e.stopPropagation();
+      setCompartirAbierto(compartirAbierto === post.id_publicacion ? null : post.id_publicacion);
+    }}
+  >
+    <div className="btn-content">
+      <Share2 size={18} />
+    </div>
+  </button>
+  
+  <button 
+    className={`action-btn-x like-btn ${estadisticas[post.id_publicacion]?.me_gusta_dado ? 'liked' : ''}`}
+    onClick={() => handleMeGusta(post.id_publicacion)}
+  >
+    <div className="btn-content">
+      <Heart size={18} />
+      <span className="count">{estadisticas[post.id_publicacion]?.total_me_gusta || 0}</span>
+    </div>
+  </button>
+  
+  <button 
+    className={`action-btn-x bookmark-btn ${estadisticas[post.id_publicacion]?.guardado ? 'saved' : ''}`}
+    onClick={() => handleGuardar(post.id_publicacion)}
+  >
+    <div className="btn-content">
+      <Bookmark size={18} />
+    </div>
+  </button>
+</div>
+
+{/* Panel de compartir - ESTILO X/TWITTER MODERNO */}
+{compartirAbierto === post.id_publicacion && (
+  <div className="compartir-panel-x" onClick={(e) => e.stopPropagation()}>
+    <div className="compartir-header-x">
+      <div className="header-content">
+        <div className="icon-circle">
+          <Share2 size={20} />
+        </div>
+        <h3>Compartir publicación</h3>
+      </div>
+      <button 
+        className="cerrar-compartir-x"
+        onClick={() => {
+          setCompartirAbierto(null);
+          setMostrarSeleccionAmigos(false);
+          setAmigosSeleccionados([]);
+        }}
+      >
+        <X size={20} />
+      </button>
+    </div>
+    
+    {/* Redes sociales externas - ESTILO MODERNO */}
+    <div className="redes-sociales-x">
+      <div className="redes-grid">
+        <button 
+          className="red-social-btn-x whatsapp-x"
+          onClick={() => compartirEnRedSocial("whatsapp", post)}
+        >
+          <div className="red-social-icon">
+            <MessageCircle size={22} />
+          </div>
+          <span>WhatsApp</span>
+        </button>
+        
+        <button 
+          className="red-social-btn-x facebook-x"
+          onClick={() => compartirEnRedSocial("facebook", post)}
+        >
+          <div className="red-social-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+            </svg>
+          </div>
+          <span>Facebook</span>
+        </button>
+        
+        <button 
+          className="red-social-btn-x twitter-x"
+          onClick={() => compartirEnRedSocial("twitter", post)}
+        >
+          <div className="red-social-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            </svg>
+          </div>
+          <span>X</span>
+        </button>
+        
+        <button 
+          className="red-social-btn-x linkedin-x"
+          onClick={() => compartirEnRedSocial("linkedin", post)}
+        >
+          <div className="red-social-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            </svg>
+          </div>
+          <span>LinkedIn</span>
+        </button>
+      </div>
+    </div>
+
+    {/* Compartir dentro de la aplicación - ESTILO X */}
+    <div className="compartir-interno-x">
+      <div className="seccion-titulo-x">
+        <Users size={18} />
+        <h4>Compartir en Artenity</h4>
+      </div>
+      
+      {/* Botón para compartir con amigos */}
+      <button 
+        className="btn-compartir-amigos-x"
+        onClick={() => setMostrarSeleccionAmigos(!mostrarSeleccionAmigos)}
+      >
+        <div className="btn-amigos-content">
+          <div className="icon-wrapper">
+            <Users size={20} />
+          </div>
+          <div className="text-content">
+            <span className="btn-title">Compartir con amigos</span>
+            <span className="btn-subtitle">Selecciona amigos específicos</span>
+          </div>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="chevron">
+            <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+          </svg>
+        </div>
+      </button>
+
+      {/* Selección de amigos - ESTILO MODERNO */}
+      {mostrarSeleccionAmigos && (
+        <div className="seleccion-amigos-x">
+          <div className="seleccion-amigos-header-x">
+            <div className="header-info">
+              <Users size={20} />
+              <div>
+                <h5>Seleccionar amigos</h5>
+                <p>Elige con quién quieres compartir</p>
               </div>
-
-              {/* Panel de compartir */}
-              {compartirAbierto === post.id_publicacion && (
-                <div className="compartir-panel" onClick={(e) => e.stopPropagation()}>
-                  <div className="compartir-header">
-                    <h3>Compartir publicación</h3>
-                    <button 
-                      className="cerrar-compartir"
-                      onClick={() => {
-                        setCompartirAbierto(null);
-                        setMostrarSeleccionAmigos(false);
-                        setAmigosSeleccionados([]);
-                      }}
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                  
-                  {/* Redes sociales externas */}
-                  <div className="redes-sociales">
-                    <button 
-                      className="red-social-btn whatsapp"
-                      onClick={() => compartirEnRedSocial("whatsapp", post)}
-                    >
-                      <MessageCircle size={20} />
-                      WhatsApp
-                    </button>
-                    
-                    <button 
-                      className="red-social-btn facebook"
-                      onClick={() => compartirEnRedSocial("facebook", post)}
-                    >
-                      <Facebook size={20} />
-                      Facebook
-                    </button>
-                    
-                    <button 
-                      className="red-social-btn twitter"
-                      onClick={() => compartirEnRedSocial("twitter", post)}
-                    >
-                      <Twitter size={20} />
-                      Twitter
-                    </button>
-                    
-                   
-                  </div>
-
-                  {/* Compartir dentro de la aplicación */}
-                  <div className="compartir-interno">
-                    <h4>Compartir en Artenity</h4>
-                    
-                    {/* Botón para compartir con amigos */}
-                    <button 
-                      className="btn-compartir-amigos"
-                      onClick={() => setMostrarSeleccionAmigos(!mostrarSeleccionAmigos)}
-                    >
-                      <Users size={16} />
-                      Compartir con amigos
-                    </button>
-
-                    {/* Selección de amigos */}
-                    {mostrarSeleccionAmigos && (
-                      <div className="seleccion-amigos">
-                        <div className="seleccion-amigos-header">
-                          <h5>Seleccionar amigos</h5>
-                          <button 
-                            className="btn-seleccionar-todos"
-                            onClick={toggleTodosAmigos}
-                          >
-                            {amigosSeleccionados.length === amigos.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
-                          </button>
-                        </div>
-                        
-                        <div className="lista-amigos">
-                          {amigos.length > 0 ? (
-                            amigos.map(amigo => (
-                              <div key={amigo.id_usuario} className="amigo-item">
-                                <label className="amigo-checkbox">
-                                  <input
-                                    type="checkbox"
-                                    checked={amigosSeleccionados.includes(amigo.id_usuario)}
-                                    onChange={() => toggleAmigoSeleccionado(amigo.id_usuario)}
-                                  />
-                                  <img
-                                    src={amigo.foto_perfil || defaultProfile}
-                                    alt={amigo.nombre_usuario}
-                                    className="foto-amigo"
-                                  />
-                                  <span className="nombre-amigo">{amigo.nombre_usuario}</span>
-                                </label>
-                              </div>
-                            ))
-                          ) : (
-                            <p className="sin-amigos">No tienes amigos agregados</p>
-                          )}
-                        </div>
-
-                        {amigosSeleccionados.length > 0 && (
-                          <div className="acciones-amigos">
-                            <button 
-                              className="btn-compartir-seleccionados"
-                              onClick={() => handleCompartir(post.id_publicacion, "amigos")}
-                            >
-                              <Share2 size={16} />
-                              Compartir con {amigosSeleccionados.length} amigo{amigosSeleccionados.length !== 1 ? 's' : ''}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Compartir en perfil */}
-                    <div className="compartir-perfil">
-                      <textarea
-                        placeholder="Añade un mensaje (opcional)"
-                        value={mensajeCompartir}
-                        onChange={(e) => setMensajeCompartir(e.target.value)}
-                        rows={3}
+            </div>
+            <button 
+              className="btn-seleccionar-todos-x"
+              onClick={toggleTodosAmigos}
+            >
+              {amigosSeleccionados.length === amigos.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
+            </button>
+          </div>
+          
+          <div className="lista-amigos-x">
+            {amigos.length > 0 ? (
+              amigos.map(amigo => (
+                <div key={amigo.id_usuario} className="amigo-item-x">
+                  <label className="amigo-checkbox-x">
+                    <input
+                      type="checkbox"
+                      checked={amigosSeleccionados.includes(amigo.id_usuario)}
+                      onChange={() => toggleAmigoSeleccionado(amigo.id_usuario)}
+                    />
+                    <div className="amigo-info">
+                      <img
+                        src={amigo.foto_perfil || defaultProfile}
+                        alt={amigo.nombre_usuario}
+                        className="foto-amigo-x"
                       />
-                      <button 
-                        className="btn-compartir-interno"
-                        onClick={() => handleCompartir(post.id_publicacion, "perfil")}
-                      >
-                        <User size={16} />
-                        Compartir en mi perfil
-                      </button>
+                      <div className="amigo-details">
+                        <span className="nombre-amigo-x">{amigo.nombre_usuario}</span>
+                        <span className="amigo-username">@{amigo.nombre_usuario.toLowerCase()}</span>
+                      </div>
                     </div>
-                  </div>
+                  </label>
                 </div>
-              )}
+              ))
+            ) : (
+              <div className="sin-amigos-x">
+                <Users size={32} />
+                <p>No tienes amigos agregados</p>
+                <span>Agrega amigos para compartir contenido</span>
+              </div>
+            )}
+          </div>
+
+          {amigosSeleccionados.length > 0 && (
+            <div className="acciones-amigos-x">
+              <button 
+                className="btn-compartir-seleccionados-x"
+                onClick={() => handleCompartir(post.id_publicacion, "amigos")}
+              >
+                <div className="btn-share-content">
+                  <Share2 size={18} />
+                  <span>Compartir con {amigosSeleccionados.length} amigo{amigosSeleccionados.length !== 1 ? 's' : ''}</span>
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Compartir en perfil - ESTILO X */}
+      <div className="compartir-perfil-x">
+        <div className="compartir-input-container">
+          <div className="user-avatar">
+            <img 
+              src={usuario?.foto_perfil || defaultProfile} 
+              alt="Tu avatar" 
+              className="avatar-img"
+            />
+          </div>
+          <div className="input-content">
+            <textarea
+              placeholder="Añade un comentario..."
+              value={mensajeCompartir}
+              onChange={(e) => setMensajeCompartir(e.target.value)}
+              rows={2}
+              className="compartir-textarea-x"
+            />
+            <div className="compartir-actions">
+              <button 
+                className="btn-compartir-perfil-x"
+                onClick={() => handleCompartir(post.id_publicacion, "perfil")}
+              >
+                <Share2 size={16} />
+                Compartir
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
               {/* Sección de comentarios */}
               {comentariosAbiertos[post.id_publicacion] && (

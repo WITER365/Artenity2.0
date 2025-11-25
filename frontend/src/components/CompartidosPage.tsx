@@ -1,5 +1,5 @@
-// src/pages/CompartidosPage.tsx - VERSIÓN CORREGIDA COMPLETA
-import { useEffect, useState } from "react";
+// src/pages/CompartidosPage.tsx - VERSIÓN FINAL INTEGRADA
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { 
   ArrowLeft, 
@@ -8,10 +8,6 @@ import {
   Bookmark, 
   Share2, 
   X,
-  Home,
-  MessageSquare,
-  Settings,
-  Image,
   Users
 } from "lucide-react";
 import "../styles/compartidos.css";
@@ -104,33 +100,112 @@ export default function CompartidosPage() {
   const [comentariosAbiertos, setComentariosAbiertos] = useState<{[key: number]: boolean}>({});
   const [nuevoComentario, setNuevoComentario] = useState<{[key: number]: string}>({});
   const [comentarios, setComentarios] = useState<{[key: number]: ComentarioData[]}>({});
+  
+  // 🔥 ESTADOS MEJORADOS PARA SCROLL
+  const [compartidoTarget, setCompartidoTarget] = useState<number | null>(null);
+  const [scrollCompletado, setScrollCompletado] = useState(false);
+  const [datosCargados, setDatosCargados] = useState(false);
+  const compartidosRefs = useRef<{[key: number]: HTMLDivElement | null}>({});
+  const containerRef = useRef<HTMLDivElement>(null);
+  const scrollAttemptsRef = useRef(0);
+  const lastScrollTargetRef = useRef<number | null>(null);
 
-  // 🔹 MEJORAR LA CARGA DE COMPARTIDOS
+  // 🔥 FUNCIÓN PARA BUSCAR COMPARTIDO EN LISTA
+  const buscarCompartidoEnLista = useCallback((idCompartido: number): boolean => {
+    return compartidosLista.some(compartido => compartido.id_compartido === idCompartido);
+  }, [compartidosLista]);
+
+  // 🔥 FUNCIÓN PARA SCROLL AUTOMÁTICO - OPTIMIZADA
+  const scrollToCompartido = useCallback((idCompartido: number, attempt = 1) => {
+    // Evitar múltiples scrolls al mismo target
+    if (lastScrollTargetRef.current === idCompartido && scrollCompletado) {
+      console.log("🔄 Scroll ya completado para este target, omitiendo...");
+      return;
+    }
+
+    console.log(`🎯 Intentando scroll (intento ${attempt}) para compartido:`, idCompartido);
+    
+    if (attempt > 5) {
+      console.warn("❌ Demasiados intentos de scroll, abortando");
+      return;
+    }
+
+    const element = compartidosRefs.current[idCompartido];
+    
+    if (element && containerRef.current) {
+      console.log("✅ Elemento encontrado, ejecutando scroll...");
+      
+      lastScrollTargetRef.current = idCompartido;
+      
+      requestAnimationFrame(() => {
+        try {
+          element.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'nearest'
+          });
+          
+          // Resaltar el elemento
+          element.classList.add('compartido-target');
+          
+          console.log("🎯 Scroll completado exitosamente");
+          setScrollCompletado(true);
+          scrollAttemptsRef.current = 0;
+          
+          // Quitar el resaltado después de 3 segundos
+          setTimeout(() => {
+            if (element) {
+              element.classList.remove('compartido-target');
+            }
+          }, 3000);
+          
+        } catch (error) {
+          console.error("❌ Error durante scroll:", error);
+        }
+      });
+      
+    } else {
+      console.warn(`❌ Elemento no encontrado (intento ${attempt}), reintentando...`);
+      
+      // Reintentar después de un delay progresivo
+      const delay = Math.min(500 * attempt, 2000);
+      setTimeout(() => {
+        if (datosCargados && compartidosLista.length > 0) {
+          scrollToCompartido(idCompartido, attempt + 1);
+        }
+      }, delay);
+    }
+  }, [compartidosLista, datosCargados, scrollCompletado]);
+
+  // 🔥 EFECTO PRINCIPAL - CARGA DE DATOS
   useEffect(() => {
     const cargarCompartidos = async () => {
       try {
         setCargando(true);
         setError(null);
+        setScrollCompletado(false);
+        setDatosCargados(false);
+        scrollAttemptsRef.current = 0;
         
         console.log("🔍 Iniciando carga de compartidos...");
-        console.log("📍 Location state recibido:", location.state);
+        console.log("📍 Location state:", location.state);
         
-        // Verificar si viene de notificación o tiene datos específicos
         const fromNotification = location.state?.fromNotification;
         const compartidoFromState = location.state?.compartidoEspecifico;
         const idCompartidoFromState = location.state?.idCompartido;
         
+        // Determinar qué vista mostrar
         if (fromNotification || compartidoFromState || idCompartidoFromState) {
-          // VISTA ESPECÍFICA - desde notificación
           console.log("🎯 Modo vista específica (desde notificación)");
           setVista('especifico');
-          await cargarCompartidoEspecifico();
+          await cargarCompartidoEspecifico(idCompartidoFromState);
         } else {
-          // VISTA DE LISTA - normal
           console.log("📋 Modo lista de compartidos");
           setVista('lista');
           await cargarListaCompartidos();
         }
+        
+        setDatosCargados(true);
         
       } catch (error) {
         console.error("❌ Error cargando compartidos:", error);
@@ -142,44 +217,86 @@ export default function CompartidosPage() {
     cargarCompartidos();
   }, [location]);
 
-  const cargarCompartidoEspecifico = async () => {
-    try {
-      const compartidoFromState = location.state?.compartidoEspecifico;
-      const idCompartidoFromState = location.state?.idCompartido;
-      const fromNotification = location.state?.fromNotification;
+  // 🔥 EFECTO PARA SCROLL AUTOMÁTICO - MEJORADO
+  useEffect(() => {
+    if (!datosCargados || !compartidoTarget || scrollCompletado) return;
+
+    console.log("📍 Condiciones para scroll:", {
+      datosCargados,
+      compartidoTarget,
+      scrollCompletado,
+      vista,
+      listaLength: compartidosLista.length
+    });
+
+    if (vista === 'lista' && compartidosLista.length > 0) {
+      const timer = setTimeout(() => {
+        console.log("🚀 Ejecutando scroll automático desde efecto...");
+        scrollToCompartido(compartidoTarget);
+      }, 400);
       
-      console.log("🔄 Cargando compartido específico:", {
-        compartidoFromState: !!compartidoFromState,
-        idCompartidoFromState,
-        fromNotification
-      });
+      return () => clearTimeout(timer);
+    }
+  }, [datosCargados, compartidoTarget, scrollCompletado, vista, compartidosLista, scrollToCompartido]);
+
+  // 🔥 EFECTO PARA MANEJAR EVENTOS DE SCROLL DESDE NOTIFICACIONES
+  useEffect(() => {
+    const handleScrollEvent = (event: CustomEvent) => {
+      console.log("📡 Evento de scroll recibido:", event.detail);
+      const { idCompartido } = event.detail;
+      
+      if (idCompartido) {
+        console.log("🎯 Procesando evento de scroll para compartido:", idCompartido);
+        
+        // Resetear estados
+        setCompartidoTarget(idCompartido);
+        setScrollCompletado(false);
+        scrollAttemptsRef.current = 0;
+        
+        if (datosCargados) {
+          if (vista === 'lista') {
+            console.log("📜 Ya estamos en lista, haciendo scroll inmediato...");
+            scrollToCompartido(idCompartido);
+          } else {
+            console.log("🔄 Cambiando a vista específica desde evento...");
+            cargarCompartidoEspecifico(idCompartido);
+          }
+        } else {
+          console.log("⏳ Datos no cargados aún, el target se procesará después de la carga");
+        }
+      }
+    };
+
+    window.addEventListener('scrollToCompartido', handleScrollEvent as EventListener);
+    
+    return () => {
+      window.removeEventListener('scrollToCompartido', handleScrollEvent as EventListener);
+    };
+  }, [vista, datosCargados, scrollToCompartido]);
+
+  // 🔥 CARGA DE COMPARTIDO ESPECÍFICO
+  const cargarCompartidoEspecifico = async (idCompartido?: number) => {
+    try {
+      const idToLoad = idCompartido || location.state?.idCompartido;
+      const compartidoFromState = location.state?.compartidoEspecifico;
+      
+      console.log("🔄 Cargando compartido específico:", { idToLoad });
       
       let compartido: Compartido | null = null;
       
       if (compartidoFromState) {
-        // Usar el compartido del estado (ya viene cargado)
-        console.log("✅ Usando compartido desde estado");
         compartido = compartidoFromState;
-      } else if (idCompartidoFromState) {
-        // Cargar desde API usando el ID
-        console.log("🔄 Cargando compartido desde API:", idCompartidoFromState);
-        try {
-          compartido = await obtenerCompartidoPorId(idCompartidoFromState);
-          console.log("✅ Compartido cargado desde API:", compartido);
-        } catch (apiError) {
-          console.error("❌ Error cargando desde API:", apiError);
-          throw apiError;
-        }
+      } else if (idToLoad) {
+        compartido = await obtenerCompartidoPorId(idToLoad);
       }
       
       if (!compartido) {
-        console.error("❌ No se pudo cargar el compartido");
         throw new Error("No se pudo cargar la publicación compartida");
       }
       
       setCompartidoEspecifico(compartido);
+      setCompartidoTarget(compartido.id_compartido);
       
-      // Cargar estadísticas para esta publicación
       if (compartido.publicacion) {
         await cargarEstadisticas(compartido.publicacion.id_publicacion);
       }
@@ -188,47 +305,47 @@ export default function CompartidosPage() {
       
     } catch (error) {
       console.error("❌ Error cargando compartido específico:", error);
-      
-      // CORREGIDO: Usar la función helper para manejar el error
       const errorMessage = getErrorMessage(error);
       setError(`No se pudo cargar la publicación compartida: ${errorMessage}`);
-      
-      // Opcional: redirigir a la vista de lista después de un tiempo
-      setTimeout(() => {
-        navigate("/compartidos", { replace: true });
-      }, 3000);
-      
-      throw error;
     } finally {
       setCargando(false);
     }
   };
 
+  // 🔥 CARGA DE LISTA DE COMPARTIDOS
   const cargarListaCompartidos = async () => {
     try {
       console.log("📋 Cargando lista de compartidos...");
       
-      // Cargar tanto mis compartidos como los de amigos
       const [misCompartidos, compartidosAmigos] = await Promise.all([
         obtenerMisCompartidos(),
         obtenerCompartidosAmigos()
       ]);
       
-      console.log("📊 Resultados:", {
+      console.log("📊 Resultados carga:", {
         misCompartidos: misCompartidos?.length || 0,
         compartidosAmigos: compartidosAmigos?.length || 0
       });
       
-      // Combinar y ordenar por fecha
       const todosCompartidos = [
         ...(misCompartidos || []),
         ...(compartidosAmigos || [])
       ].sort((a, b) => new Date(b.fecha_compartido).getTime() - new Date(a.fecha_compartido).getTime());
       
-      console.log("📦 Total de compartidos:", todosCompartidos.length);
+      console.log("📦 Total de compartidos cargados:", todosCompartidos.length);
       setCompartidosLista(todosCompartidos);
       
-      // Cargar estadísticas para cada publicación
+      // Verificar si hay un target pendiente del state
+      const pendingTarget = location.state?.idCompartido;
+      if (pendingTarget) {
+        console.log("🎯 Target pendiente encontrado en state:", pendingTarget);
+        setCompartidoTarget(pendingTarget);
+        setScrollCompletado(false);
+      }
+      
+
+      
+      // Cargar estadísticas
       todosCompartidos.forEach(compartido => {
         if (compartido.publicacion) {
           cargarEstadisticas(compartido.publicacion.id_publicacion)
@@ -364,11 +481,9 @@ export default function CompartidosPage() {
     try {
       await eliminarCompartido(idCompartido);
       
-      // Si estamos en vista específica, volver a la lista
       if (vista === 'especifico') {
         navigate("/compartidos", { replace: true });
       } else {
-        // Recargar la lista
         await cargarListaCompartidos();
       }
     } catch (error) {
@@ -388,13 +503,25 @@ export default function CompartidosPage() {
     navigate(`/publicacion/${idPublicacion}`);
   };
 
-  // 🔹 NUEVA FUNCIÓN: Volver a lista desde vista específica
+  // 🔹 Volver a lista desde vista específica
   const volverALista = () => {
     console.log("↩️ Volviendo a lista de compartidos");
-    // Limpiar el estado de navegación y recargar lista
     navigate("/compartidos", { replace: true });
-    window.location.reload(); // Forzar recarga para limpiar estado
+    window.location.reload();
   };
+
+  // 🔥 FUNCIÓN PARA ASIGNAR REFS - MEJORADA
+  const asignarRef = useCallback((idCompartido: number, element: HTMLDivElement | null) => {
+    if (element) {
+      compartidosRefs.current[idCompartido] = element;
+      
+      // Scroll automático cuando se asigna la ref del target
+      if (idCompartido === compartidoTarget && !scrollCompletado && datosCargados) {
+        console.log(`🎯 Ref asignada para target ${idCompartido}, ejecutando scroll...`);
+        setTimeout(() => scrollToCompartido(idCompartido), 200);
+      }
+    }
+  }, [compartidoTarget, scrollCompletado, datosCargados, scrollToCompartido]);
 
   // 🔹 Renderizar compartido específico
   const renderCompartidoEspecifico = () => {
@@ -415,7 +542,6 @@ export default function CompartidosPage() {
 
     return (
       <div className="compartido-especifico-container">
-        {/* Header del compartido MEJORADO */}
         <div className="compartido-especifico-header">
           <button 
             className="btn-volver-lista" 
@@ -464,14 +590,12 @@ export default function CompartidosPage() {
           )}
         </div>
 
-        {/* Mensaje del compartido */}
         {compartidoEspecifico.mensaje && (
           <div className="compartido-mensaje-especifico">
             <p>"{compartidoEspecifico.mensaje}"</p>
           </div>
         )}
 
-        {/* Publicación original */}
         <div className="publicacion-original-especifica">
           <div className="post-header-especifico">
             <img
@@ -503,7 +627,6 @@ export default function CompartidosPage() {
             )}
           </div>
 
-          {/* Estadísticas */}
           {stats && (
             <div className="publicacion-stats-especifico">
               <span>{stats.me_gusta} me gusta</span>
@@ -512,7 +635,6 @@ export default function CompartidosPage() {
             </div>
           )}
 
-          {/* Acciones */}
           {stats && (
             <div className="post-actions-especifico">
               <button
@@ -543,7 +665,6 @@ export default function CompartidosPage() {
             </div>
           )}
 
-          {/* Sección de comentarios */}
           <div className="comentarios-section-especifico">
             <div className="comentarios-lista-especifico">
               {comentariosPublicacion.length > 0 ? (
@@ -572,7 +693,6 @@ export default function CompartidosPage() {
               )}
             </div>
 
-            {/* Input de nuevo comentario */}
             <div className="nuevo-comentario-especifico">
               <input
                 type="text"
@@ -615,234 +735,204 @@ export default function CompartidosPage() {
     }
 
     return (
-      <div className="compartidos-lista">
-        {compartidosLista.map((compartido) => {
-          const publicacion = compartido.publicacion;
-          const stats = estadisticas[publicacion.id_publicacion];
-          const comentariosPublicacion = comentarios[publicacion.id_publicacion] || [];
+      <div className="compartidos-lista-container">
+        <div className="compartidos-lista" ref={containerRef}>
+          {compartidosLista.map((compartido) => {
+            const publicacion = compartido.publicacion;
+            const stats = estadisticas[publicacion.id_publicacion];
+            const comentariosPublicacion = comentarios[publicacion.id_publicacion] || [];
+            
+            const esTarget = compartidoTarget === compartido.id_compartido;
+            const claseTarget = esTarget && !scrollCompletado ? 'compartido-target' : '';
 
-          return (
-            <div key={compartido.id_compartido} className="compartido-item">
-              {/* Header del compartido */}
-              <div className="compartido-header">
-                <div className="compartido-info">
-                  <img
-                    src={compartido.usuario_compartio.foto_perfil || defaultProfile}
-                    alt="Perfil"
-                    className="foto-perfil-post"
-                  />
-                  <div className="compartido-details">
+            return (
+              <div 
+                key={compartido.id_compartido} 
+                className={`compartido-item ${claseTarget}`}
+                ref={(el) => asignarRef(compartido.id_compartido, el)}
+                data-compartido-id={compartido.id_compartido}
+                data-es-target={esTarget}
+              >
+                <div className="compartido-header">
+                  <div className="compartido-info">
+                    <img
+                      src={compartido.usuario_compartio.foto_perfil || defaultProfile}
+                      alt="Perfil"
+                      className="foto-perfil-post"
+                    />
+                    <div className="compartido-details">
+                      <div className="user-info">
+                        <span className="username">{compartido.usuario_compartio.nombre_usuario}</span>
+                        <span className="compartido-texto">compartió esta publicación</span>
+                        <span className="timestamp">
+                          {new Date(compartido.fecha_compartido).toLocaleDateString('es-ES', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {usuario?.id_usuario === compartido.usuario_compartio.id_usuario && (
+                    <button
+                      onClick={() => handleEliminarCompartido(compartido.id_compartido)}
+                      className="btn-eliminar-compartido"
+                      title="Eliminar compartido"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+
+                {compartido.mensaje && (
+                  <div className="compartido-mensaje">
+                    <p>"{compartido.mensaje}"</p>
+                  </div>
+                )}
+
+                <div className="publicacion-original">
+                  <div className="post-header">
+                    <img
+                      src={publicacion.usuario.foto_perfil || defaultProfile}
+                      alt="Perfil"
+                      className="foto-perfil-post"
+                    />
                     <div className="user-info">
-                      <span className="username">{compartido.usuario_compartio.nombre_usuario}</span>
-                      <span className="compartido-texto">compartió esta publicación</span>
+                      <span className="username">{publicacion.usuario.nombre_usuario}</span>
                       <span className="timestamp">
-                        {new Date(compartido.fecha_compartido).toLocaleDateString('es-ES', {
+                        {new Date(publicacion.fecha_creacion).toLocaleDateString('es-ES', {
                           day: 'numeric',
                           month: 'long',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
+                          year: 'numeric'
                         })}
                       </span>
                     </div>
                   </div>
-                </div>
-                
-                {usuario?.id_usuario === compartido.usuario_compartio.id_usuario && (
-                  <button
-                    onClick={() => handleEliminarCompartido(compartido.id_compartido)}
-                    className="btn-eliminar-compartido"
-                    title="Eliminar compartido"
-                  >
-                    <X size={16} />
-                  </button>
-                )}
-              </div>
 
-              {/* Mensaje del compartido */}
-              {compartido.mensaje && (
-                <div className="compartido-mensaje">
-                  <p>"{compartido.mensaje}"</p>
-                </div>
-              )}
-
-              {/* Publicación original */}
-              <div className="publicacion-original">
-                <div className="post-header">
-                  <img
-                    src={publicacion.usuario.foto_perfil || defaultProfile}
-                    alt="Perfil"
-                    className="foto-perfil-post"
-                  />
-                  <div className="user-info">
-                    <span className="username">{publicacion.usuario.nombre_usuario}</span>
-                    <span className="timestamp">
-                      {new Date(publicacion.fecha_creacion).toLocaleDateString('es-ES', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric'
-                      })}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="post-content">
-                  <p>{publicacion.contenido}</p>
-                  {publicacion.imagen_url && (
-                    <img
-                      src={publicacion.imagen_url}
-                      alt="Publicación"
-                      className="post-image"
-                      onClick={() => verPublicacion(publicacion.id_publicacion)}
-                    />
-                  )}
-                </div>
-
-                {/* Estadísticas */}
-                {stats && (
-                  <div className="publicacion-stats">
-                    <span>{stats.me_gusta} me gusta</span>
-                    <span>{stats.comentarios} comentarios</span>
-                    <span>{stats.compartidos} compartidos</span>
-                  </div>
-                )}
-
-                {/* Acciones */}
-                {stats && (
-                  <div className="post-actions">
-                    <button
-                      onClick={() => handleMeGusta(publicacion.id_publicacion)}
-                      className={`action-btn ${stats.usuario_dio_me_gusta ? 'liked' : ''}`}
-                    >
-                      <Heart size={18} />
-                      <span>Me gusta</span>
-                    </button>
-                    <button
-                      onClick={() => toggleComentarios(publicacion.id_publicacion)}
-                      className="action-btn"
-                    >
-                      <MessageCircle size={18} />
-                      <span>Comentar</span>
-                    </button>
-                    <button 
-                      className="action-btn"
-                      onClick={() => verCompartidoEspecifico(compartido)}
-                    >
-                      <Share2 size={18} />
-                      <span>Ver compartido</span>
-                    </button>
-                    <button
-                      onClick={() => handleGuardar(publicacion.id_publicacion)}
-                      className={`action-btn ${stats.usuario_guardo ? 'saved' : ''}`}
-                    >
-                      <Bookmark size={18} />
-                      <span>Guardar</span>
-                    </button>
-                  </div>
-                )}
-
-                {/* Sección de comentarios (colapsable) */}
-                {comentariosAbiertos[publicacion.id_publicacion] && (
-                  <div className="comentarios-section">
-                    <div className="comentarios-lista">
-                      {comentariosPublicacion.length > 0 ? (
-                        comentariosPublicacion.map((comentario) => (
-                          <div key={comentario.id_comentario} className="comentario">
-                            <img
-                              src={comentario.usuario.foto_perfil || defaultProfile}
-                              alt="Perfil"
-                              className="foto-perfil-comentario"
-                            />
-                            <div className="comentario-content">
-                              <div className="comentario-header">
-                                <span className="comentario-usuario">{comentario.usuario.nombre_usuario}</span>
-                                <span className="comentario-fecha">
-                                  {new Date(comentario.fecha_creacion).toLocaleDateString()}
-                                </span>
-                              </div>
-                              <p className="comentario-texto">{comentario.contenido}</p>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="sin-comentarios">
-                          <p>No hay comentarios aún.</p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="nuevo-comentario">
-                      <input
-                        type="text"
-                        placeholder="Escribe un comentario..."
-                        value={nuevoComentario[publicacion.id_publicacion] || ''}
-                        onChange={(e) => setNuevoComentario(prev => ({
-                          ...prev,
-                          [publicacion.id_publicacion]: e.target.value
-                        }))}
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter') {
-                            publicarComentario(publicacion.id_publicacion);
-                          }
-                        }}
+                  <div className="post-content">
+                    <p>{publicacion.contenido}</p>
+                    {publicacion.imagen_url && (
+                      <img
+                        src={publicacion.imagen_url}
+                        alt="Publicación"
+                        className="post-image"
+                        onClick={() => verPublicacion(publicacion.id_publicacion)}
                       />
+                    )}
+                  </div>
+
+                  {stats && (
+                    <div className="publicacion-stats">
+                      <span>{stats.me_gusta} me gusta</span>
+                      <span>{stats.comentarios} comentarios</span>
+                      <span>{stats.compartidos} compartidos</span>
+                    </div>
+                  )}
+
+                  {stats && (
+                    <div className="post-actions">
                       <button
-                        onClick={() => publicarComentario(publicacion.id_publicacion)}
-                        disabled={!nuevoComentario[publicacion.id_publicacion]?.trim()}
-                        className="btn-comentar"
+                        onClick={() => handleMeGusta(publicacion.id_publicacion)}
+                        className={`action-btn ${stats.usuario_dio_me_gusta ? 'liked' : ''}`}
                       >
-                        Comentar
+                        <Heart size={18} />
+                        <span>Me gusta</span>
+                      </button>
+                      <button
+                        onClick={() => toggleComentarios(publicacion.id_publicacion)}
+                        className="action-btn"
+                      >
+                        <MessageCircle size={18} />
+                        <span>Comentar</span>
+                      </button>
+                      <button 
+                        className="action-btn"
+                        onClick={() => verCompartidoEspecifico(compartido)}
+                      >
+                        <Share2 size={18} />
+                        <span>Ver compartido</span>
+                      </button>
+                      <button
+                        onClick={() => handleGuardar(publicacion.id_publicacion)}
+                        className={`action-btn ${stats.usuario_guardo ? 'saved' : ''}`}
+                      >
+                        <Bookmark size={18} />
+                        <span>Guardar</span>
                       </button>
                     </div>
-                  </div>
-                )}
+                  )}
+
+                  {comentariosAbiertos[publicacion.id_publicacion] && (
+                    <div className="comentarios-section">
+                      <div className="comentarios-lista">
+                        {comentariosPublicacion.length > 0 ? (
+                          comentariosPublicacion.map((comentario) => (
+                            <div key={comentario.id_comentario} className="comentario">
+                              <img
+                                src={comentario.usuario.foto_perfil || defaultProfile}
+                                alt="Perfil"
+                                className="foto-perfil-comentario"
+                              />
+                              <div className="comentario-content">
+                                <div className="comentario-header">
+                                  <span className="comentario-usuario">{comentario.usuario.nombre_usuario}</span>
+                                  <span className="comentario-fecha">
+                                    {new Date(comentario.fecha_creacion).toLocaleDateString()}
+                                  </span>
+                                </div>
+                                <p className="comentario-texto">{comentario.contenido}</p>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="sin-comentarios">
+                            <p>No hay comentarios aún.</p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="nuevo-comentario">
+                        <input
+                          type="text"
+                          placeholder="Escribe un comentario..."
+                          value={nuevoComentario[publicacion.id_publicacion] || ''}
+                          onChange={(e) => setNuevoComentario(prev => ({
+                            ...prev,
+                            [publicacion.id_publicacion]: e.target.value
+                          }))}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              publicarComentario(publicacion.id_publicacion);
+                            }
+                          }}
+                        />
+                        <button
+                          onClick={() => publicarComentario(publicacion.id_publicacion)}
+                          disabled={!nuevoComentario[publicacion.id_publicacion]?.trim()}
+                          className="btn-comentar"
+                        >
+                          Comentar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     );
   };
 
   return (
     <div className="compartidos-page">
-      <div className="main-container compartidos-layout">
-        
-        {/* Sidebar izquierda */}
-        <aside className="sidebar">
-          <div>
-            <div className="text-center text-2xl font-bold mb-8">🎨 Artenity</div>
-            <nav>
-              <ul className="space-y-4">
-                <li>
-                  <button className="nav-btn" onClick={() => navigate("/principal")}>
-                    <Home /> Home
-                  </button>
-                </li>
-                <li>
-                  <button className="nav-btn" onClick={() => navigate("/mensajes")}>
-                    <MessageSquare /> Mensajes
-                  </button>
-                </li>
-                <li>
-                  <button className="nav-btn">
-                    <Settings /> Configuración
-                  </button>
-                </li>
-                <li>
-                  <button className="nav-btn">
-                    <Image /> Galería de Arte
-                  </button>
-                </li>
-              </ul>
-            </nav>
-          </div>
-        </aside>
-
-        {/* Sección central */}
-        <section className="center-section compartidos-center">
-          
-          {/* Header */}
+      <div className="compartidos-layout-simple">
+        <section className="compartidos-center-simple">
           <div className="compartidos-header">
             <button 
               className="btn-volver" 
@@ -854,6 +944,9 @@ export default function CompartidosPage() {
 
             <h1>
               {vista === 'especifico' ? 'Publicación Compartida' : 'Publicaciones Compartidas'}
+              {compartidoTarget && !scrollCompletado && (
+                <span className="buscando-indicator"> 🔍 Buscando publicación...</span>
+              )}
             </h1>
 
             <div className="compartido-indicator">
@@ -866,7 +959,6 @@ export default function CompartidosPage() {
             </div>
           </div>
 
-          {/* Contenido */}
           <div className="compartidos-content">
             {cargando ? (
               <div className="cargando">
@@ -895,19 +987,6 @@ export default function CompartidosPage() {
             )}
           </div>
         </section>
-
-        {/* Sidebar derecha */}
-        <aside className="right-sidebar">
-          <div className="card">
-            <h2>COMUNIDADES A SEGUIR</h2>
-          </div>
-          <div className="card">
-            <h2>LO QUE SUCEDE CON EL MUNDO DEL ARTE</h2>
-          </div>
-          <div className="card">
-            <h2>A QUIÉN SEGUIR</h2>
-          </div>
-        </aside>
       </div>
     </div>
   );

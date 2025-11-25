@@ -22,45 +22,51 @@ export default function NotificacionesPanel({ usuario }: { usuario: any }) {
   const [cantidadNoLeidas, setCantidadNoLeidas] = useState(0);
 
   // ✅ FUNCIÓN CORREGIDA - Manejo de clic en notificaciones
-  const handleNotificacionClick = async (notificacion: any) => {
-    try {
-      console.log("🔔 Notificación clickeada:", notificacion);
+const handleNotificacionClick = async (notificacion: any) => {
+  try {
+    console.log("🔔 Notificación clickeada:", notificacion);
+    
+    // 🔥 MANEJO ESPECÍFICO PARA COMPARTIDOS
+    if (notificacion.tipo === "compartido" || notificacion.tipo === "compartido_amigo") {
+      console.log("📤 Es una notificación de compartido");
       
-      // 🔥 MANEJO ESPECÍFICO PARA COMPARTIDOS
-      if (notificacion.tipo === "compartido" || notificacion.tipo === "compartido_amigo") {
-        console.log("📤 Es una notificación de compartido");
-        
-        if (!notificacion.id_referencia) {
-          console.warn("❌ La notificación no tiene id_referencia");
-          // En lugar de alert, podrías mostrar un mensaje más amigable
-          console.log("Mostrando página de compartidos general...");
-          setMostrarPanel(false);
-          navigate("/compartidos");
-          return;
-        }
-
-        const idCompartido = notificacion.id_referencia;
-        
-        if (isNaN(idCompartido)) {
-          console.error("ID de compartido inválido:", idCompartido);
-          setMostrarPanel(false);
-          navigate("/compartidos");
-          return;
-        }
-
-        console.log("🎯 Navegando a compartido específico:", idCompartido);
+      if (!notificacion.id_referencia) {
+        console.warn("❌ La notificación no tiene id_referencia");
         setMostrarPanel(false);
-        
-        // Navegar directamente con el ID, la página se encargará de cargar los datos
-        navigate(`/compartidos`, { 
-          state: { 
-            idCompartido: idCompartido,
-            fromNotification: true
-          }
-        });
+        navigate("/compartidos");
         return;
-        
-      } 
+      }
+
+      const idCompartido = notificacion.id_referencia;
+      
+      if (isNaN(idCompartido)) {
+        console.error("ID de compartido inválido:", idCompartido);
+        setMostrarPanel(false);
+        navigate("/compartidos");
+        return;
+      }
+
+      console.log("🎯 Navegando a compartido específico:", idCompartido);
+      setMostrarPanel(false);
+      
+      // 🔥 NUEVO: Disparar evento para scroll automático
+      const scrollEvent = new CustomEvent('scrollToCompartido', {
+        detail: { 
+          idCompartido: idCompartido,
+          fromNotification: true
+        }
+      });
+      window.dispatchEvent(scrollEvent);
+      
+      // Navegar a compartidos
+      navigate(`/compartidos`, { 
+        state: { 
+          idCompartido: idCompartido,
+          fromNotification: true
+        }
+      });
+      return;
+    }
       // Manejo para me gusta
       else if (notificacion.tipo === "me_gusta" && notificacion.id_referencia) {
         const idPublicacion = notificacion.id_referencia;
