@@ -142,3 +142,82 @@
     margin: 8px 0 !important;
   }
 }
+/* Estilos para medios (imágenes y videos) */
+.publicacion-medios {
+  margin-top: 12px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.publicacion-medios.unico-medio {
+  max-width: 100%;
+}
+
+.publicacion-medios.multiples-medios {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+}
+
+.medio-item {
+  position: relative;
+  width: 100%;
+}
+
+.medio-item:only-child {
+  grid-column: 1 / -1;
+}
+
+.post-image,
+.post-image-especifico {
+  width: 100%;
+  max-height: 500px;
+  object-fit: cover;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.post-image:hover,
+.post-image-especifico:hover {
+  transform: scale(1.02);
+}
+
+/* Estilos para videos */
+.video-container {
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+}
+
+.post-video,
+.post-video-especifico {
+  width: 100%;
+  max-height: 500px;
+  border-radius: 12px;
+  outline: none;
+}
+
+/* Para vista específica */
+.post-image-especifico {
+  max-height: 600px;
+}
+
+.post-video-especifico {
+  max-height: 600px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .publicacion-medios.multiples-medios {
+    grid-template-columns: 1fr;
+  }
+  
+  .post-image,
+  .post-image-especifico,
+  .post-video,
+  .post-video-especifico {
+    max-height: 400px;
+  }
+}
