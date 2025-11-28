@@ -8,7 +8,7 @@ import Register from "./components/register";
 import PaginaPrincipal from "./components/paginaprincipal";
 import Perfil from "./components/perfil";
 import Busqueda from "./components/busqueda";
-import Messages from "./components/Messages";
+import Messages from "./components/Menssages";
 import PerfilUsuario from "./components/PerfilUsuario";
 import ForgotPassword from "./components/ForgotPassword";
 import ResetPassword from "./components/ResetPassword";

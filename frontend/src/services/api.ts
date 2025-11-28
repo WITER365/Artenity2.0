@@ -504,3 +504,65 @@ export const eliminarCompartido = async (idCompartido: number): Promise<void> =>
   await api.delete(`/compartidos/${idCompartido}`, { headers: getAuthHeaders() });
 };
 
+// ================== CHAT Y MENSAJES ==================
+
+export interface Chat {
+  id: number;
+  username: string;
+  nombre_completo: string;
+  foto_perfil: string | null;
+  lastMessage: string;
+  color: string;
+  ultima_actividad: string;
+  no_leidos: number;
+}
+
+export interface Message {
+  id: number;
+  sender: "yo" | "otro";
+  sender_id: number;
+  sender_username: string;
+  text: string;
+  tipo: string;
+  archivo_url?: string;
+  fecha: string;
+  leido: boolean;
+}
+
+export interface ConfiguracionChat {
+  fondo_chat: string;
+  color_burbuja: string;
+}
+
+// Obtener chats del usuario
+export async function obtenerChats(): Promise<Chat[]> {
+  const res = await api.get("/chats", { headers: getAuthHeaders() });
+  return res.data;
+}
+
+// Obtener mensajes de un chat
+export async function obtenerMensajesChat(idChat: number): Promise<Message[]> {
+  const res = await api.get(`/chats/${idChat}/mensajes`, { headers: getAuthHeaders() });
+  return res.data;
+}
+
+// Enviar mensaje
+export async function enviarMensaje(idChat: number, contenido: string, tipo: string = "texto"): Promise<any> {
+  const res = await api.post(`/chats/${idChat}/mensajes`, 
+    { contenido, tipo }, 
+    { headers: getAuthHeaders() }
+  );
+  return res.data;
+}
+
+// Crear o obtener chat con usuario
+export async function crearObtenerChat(idUsuarioDestino: number): Promise<{id_chat: number, existed: boolean}> {
+  const res = await api.post(`/chats/con-usuario/${idUsuarioDestino}`, {}, { headers: getAuthHeaders() });
+  return res.data;
+}
+
+// Configurar chat
+export async function configurarChat(idChat: number, configuracion: ConfiguracionChat): Promise<any> {
+  const res = await api.put(`/chats/${idChat}/configuracion`, configuracion, { headers: getAuthHeaders() });
+  return res.data;
+}

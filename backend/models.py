@@ -256,3 +256,39 @@ class Compartido(Base):
     
     usuario = relationship("Usuario", back_populates="compartidos")
     publicacion = relationship("Publicacion", back_populates="compartidos")
+
+
+    # ------------------ CHAT Y MENSAJES ------------------
+class Chat(Base):
+    __tablename__ = "chats"
+    
+    id_chat = Column(Integer, primary_key=True, index=True)
+    id_usuario1 = Column(Integer, ForeignKey("usuarios.id_usuario", ondelete="CASCADE"))
+    id_usuario2 = Column(Integer, ForeignKey("usuarios.id_usuario", ondelete="CASCADE"))
+    fecha_creacion = Column(DateTime, default=datetime.utcnow)
+    ultima_actividad = Column(DateTime, default=datetime.utcnow)
+    
+    # Configuración personalizada del chat
+    fondo_chat_usuario1 = Column(String(50), default="default")
+    color_burbuja_usuario1 = Column(String(20), default="#6C63FF")
+    fondo_chat_usuario2 = Column(String(50), default="default")
+    color_burbuja_usuario2 = Column(String(20), default="#6C63FF")
+    
+    usuario1 = relationship("Usuario", foreign_keys=[id_usuario1])
+    usuario2 = relationship("Usuario", foreign_keys=[id_usuario2])
+    mensajes = relationship("Mensaje", back_populates="chat", cascade="all, delete-orphan")
+
+class Mensaje(Base):
+    __tablename__ = "mensajes"
+    
+    id_mensaje = Column(Integer, primary_key=True, index=True)
+    id_chat = Column(Integer, ForeignKey("chats.id_chat", ondelete="CASCADE"))
+    id_emisor = Column(Integer, ForeignKey("usuarios.id_usuario", ondelete="CASCADE"))
+    contenido = Column(Text, nullable=False)
+    tipo = Column(String(20), default="texto")  # texto, imagen, video
+    archivo_url = Column(String(500), nullable=True)
+    fecha_envio = Column(DateTime, default=datetime.utcnow)
+    leido = Column(Boolean, default=False)
+    
+    chat = relationship("Chat", back_populates="mensajes")
+    emisor = relationship("Usuario")
