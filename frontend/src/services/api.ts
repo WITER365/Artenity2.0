@@ -618,9 +618,10 @@ export async function configurarChat(idChat: number, configuracion: Configuracio
 
 // Eliminar mensaje
 export const eliminarMensaje = async (idChat: number, idMensaje: number): Promise<void> => {
-  await api.delete(`/chats/${idChat}/mensajes/${idMensaje}`, {
+  const response = await api.delete(`/chats/${idChat}/mensajes/${idMensaje}`, {
     headers: getAuthHeaders(),
   });
+  return response.data;
 };
 
 // Eliminar chat completo
@@ -632,7 +633,8 @@ export const eliminarChat = async (idChat: number): Promise<void> => {
 
 // Eliminar mensaje para todos
 export const eliminarMensajeParaTodos = async (idMensaje: number): Promise<void> => {
-  await api.delete(`/mensajes/${idMensaje}/para-todos`, {
+  const response = await api.delete(`/mensajes/${idMensaje}/para-todos`, {
     headers: getAuthHeaders(),
   });
+  return response.data;
 };

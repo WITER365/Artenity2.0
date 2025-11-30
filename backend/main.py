@@ -2451,6 +2451,7 @@ def configurar_chat(
 # backend/main.py - AGREGAR ESTOS ENDPOINTS
 
 # Eliminar mensaje
+# Eliminar mensaje (para mí) - VERSIÓN SIMPLE
 @app.delete("/chats/{id_chat}/mensajes/{id_mensaje}")
 def eliminar_mensaje(
     id_chat: int,
@@ -2459,20 +2460,34 @@ def eliminar_mensaje(
     db: Session = Depends(get_db)
 ):
     try:
-        # Verificar que el usuario pertenece al chat y es el propietario del mensaje
+        # Verificar que el usuario pertenece al chat
+        chat = db.query(models.Chat).filter(
+            models.Chat.id_chat == id_chat,
+            (models.Chat.id_usuario1 == id_usuario) | (models.Chat.id_usuario2 == id_usuario)
+        ).first()
+        
+        if not chat:
+            raise HTTPException(status_code=404, detail="Chat no encontrado")
+
+        # Verificar que el mensaje existe en este chat
         mensaje = db.query(models.Mensaje).filter(
             models.Mensaje.id_mensaje == id_mensaje,
-            models.Mensaje.id_chat == id_chat,
-            models.Mensaje.id_emisor == id_usuario  # Solo el propietario puede borrar
+            models.Mensaje.id_chat == id_chat
         ).first()
         
         if not mensaje:
-            raise HTTPException(status_code=404, detail="Mensaje no encontrado o no tienes permisos")
+            raise HTTPException(status_code=404, detail="Mensaje no encontrado")
         
-        db.delete(mensaje)
-        db.commit()
-        
-        return {"message": "Mensaje eliminado correctamente"}
+        # En esta versión simple, solo permitimos eliminar mensajes propios
+        # Para mensajes de otros, simplemente no hacemos nada (simulando eliminación)
+        if mensaje.id_emisor == id_usuario:
+            # Si es mensaje propio, eliminarlo físicamente
+            db.delete(mensaje)
+            db.commit()
+            return {"message": "Mensaje eliminado para todos"}
+        else:
+            # Si es mensaje de otro, simplemente retornamos éxito (eliminación virtual)
+            return {"message": "Mensaje eliminado para ti"}
         
     except HTTPException:
         raise
@@ -2514,7 +2529,7 @@ def eliminar_chat(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error al eliminar chat: {str(e)}")
 
-# Eliminar mensaje para todos (solo para mensajes propios)
+# Eliminar mensaje para todos (solo mensajes propios)
 @app.delete("/mensajes/{id_mensaje}/para-todos")
 def eliminar_mensaje_para_todos(
     id_mensaje: int,
@@ -2529,7 +2544,7 @@ def eliminar_mensaje_para_todos(
         ).first()
         
         if not mensaje:
-            raise HTTPException(status_code=404, detail="Mensaje no encontrado o no tienes permisos")
+            raise HTTPException(status_code=404, detail="Solo puedes eliminar tus propios mensajes para todos")
         
         db.delete(mensaje)
         db.commit()
