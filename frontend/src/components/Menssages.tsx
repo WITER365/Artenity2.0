@@ -1,3 +1,4 @@
+// frontend/components/Messages.tsx - VERSIÓN COMPLETA CON FUNCIONALIDAD DE ELIMINAR
 import React, { useState, useEffect, useRef } from "react";
 import "../styles/Messages.css";
 import { useNavigate } from "react-router-dom";
@@ -8,6 +9,9 @@ import {
   crearObtenerChat,
   configurarChat,
   obtenerAmigos,
+  eliminarMensaje,
+  eliminarChat,
+  eliminarMensajeParaTodos,
   Chat as ChatType,
   Message as MessageType,
   ConfiguracionChat,
@@ -35,6 +39,8 @@ const Messages: React.FC = () => {
   const [amigos, setAmigos] = useState<User[]>([]);
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [showConfigModal, setShowConfigModal] = useState(false);
+  const [showDeleteMenu, setShowDeleteMenu] = useState<{x: number, y: number, message: MessageType} | null>(null);
+  const [showChatMenu, setShowChatMenu] = useState<{x: number, y: number, chat: ChatType} | null>(null);
   const [chatConfig, setChatConfig] = useState<ConfiguracionChat>({
     fondo_chat: "default",
     color_burbuja: "#6C63FF"
@@ -46,6 +52,7 @@ const Messages: React.FC = () => {
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const chatListRef = useRef<HTMLDivElement>(null);
 
   // Cargar chats y amigos
   useEffect(() => {
@@ -65,6 +72,17 @@ const Messages: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Cerrar menús al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setShowDeleteMenu(null);
+      setShowChatMenu(null);
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   const cargarChats = async () => {
     try {
@@ -225,6 +243,76 @@ const Messages: React.FC = () => {
     }
   };
 
+  // Manejar clic derecho en mensajes
+  const handleMessageContextMenu = (e: React.MouseEvent, message: MessageType) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    setShowDeleteMenu({
+      x: e.clientX,
+      y: e.clientY,
+      message
+    });
+  };
+
+  // Manejar clic derecho en chats
+  const handleChatContextMenu = (e: React.MouseEvent, chat: ChatType) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    setShowChatMenu({
+      x: e.clientX,
+      y: e.clientY,
+      chat
+    });
+  };
+
+  // Eliminar mensaje
+  const handleDeleteMessage = async (message: MessageType) => {
+    if (!selectedChat) return;
+
+    try {
+      await eliminarMensaje(selectedChat.id, message.id);
+      setMessages(prev => prev.filter(m => m.id !== message.id));
+      setShowDeleteMenu(null);
+      await cargarChats(); // Recargar para actualizar último mensaje
+    } catch (error) {
+      console.error("Error eliminando mensaje:", error);
+      alert("Error al eliminar el mensaje");
+    }
+  };
+
+  // Eliminar mensaje para todos
+  const handleDeleteMessageForEveryone = async (message: MessageType) => {
+    try {
+      await eliminarMensajeParaTodos(message.id);
+      setMessages(prev => prev.filter(m => m.id !== message.id));
+      setShowDeleteMenu(null);
+      await cargarChats();
+    } catch (error) {
+      console.error("Error eliminando mensaje para todos:", error);
+      alert("Error al eliminar el mensaje");
+    }
+  };
+
+  // Eliminar chat
+  const handleDeleteChat = async (chat: ChatType) => {
+    try {
+      await eliminarChat(chat.id);
+      setChats(prev => prev.filter(c => c.id !== chat.id));
+      setShowChatMenu(null);
+      
+      // Si el chat eliminado era el seleccionado, limpiar selección
+      if (selectedChat?.id === chat.id) {
+        setSelectedChat(null);
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error("Error eliminando chat:", error);
+      alert("Error al eliminar el chat");
+    }
+  };
+
   // Renderizar mensajes con archivos
   const renderMessageContent = (msg: MessageType) => {
     if (msg.tipo === "texto") {
@@ -324,7 +412,7 @@ const Messages: React.FC = () => {
           </button>
         </div>
         
-        <div className="chats-list">
+        <div className="chats-list" ref={chatListRef}>
           {loading ? (
             <div className="loading-chats">Cargando chats...</div>
           ) : chats.length === 0 ? (
@@ -344,6 +432,7 @@ const Messages: React.FC = () => {
                 className={`chat-card ${selectedChat?.id === chat.id ? "active" : ""}`}
                 style={{ borderLeftColor: chat.color }}
                 onClick={() => setSelectedChat(chat)}
+                onContextMenu={(e) => handleChatContextMenu(e, chat)}
               >
                 <div className="chat-avatar">
                   {chat.foto_perfil ? (
@@ -423,6 +512,7 @@ const Messages: React.FC = () => {
                     style={{ 
                       backgroundColor: msg.sender === "yo" ? chatConfig.color_burbuja : undefined 
                     }}
+                    onContextMenu={(e) => handleMessageContextMenu(e, msg)}
                   >
                     {msg.sender === "otro" && (
                       <div className="message-sender">
@@ -519,6 +609,72 @@ const Messages: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Menú contextual para mensajes */}
+      {showDeleteMenu && (
+        <div 
+          className="context-menu"
+          style={{
+            position: 'fixed',
+            top: showDeleteMenu.y,
+            left: showDeleteMenu.x,
+            zIndex: 1000
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="context-menu-content">
+            <button 
+              className="context-menu-item"
+              onClick={() => handleDeleteMessage(showDeleteMenu.message)}
+            >
+              Eliminar para mí
+            </button>
+            {showDeleteMenu.message.sender === "yo" && (
+              <button 
+                className="context-menu-item"
+                onClick={() => handleDeleteMessageForEveryone(showDeleteMenu.message)}
+              >
+                Eliminar para todos
+              </button>
+            )}
+            <button 
+              className="context-menu-item"
+              onClick={() => setShowDeleteMenu(null)}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Menú contextual para chats */}
+      {showChatMenu && (
+        <div 
+          className="context-menu"
+          style={{
+            position: 'fixed',
+            top: showChatMenu.y,
+            left: showChatMenu.x,
+            zIndex: 1000
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="context-menu-content">
+            <button 
+              className="context-menu-item delete"
+              onClick={() => handleDeleteChat(showChatMenu.chat)}
+            >
+              Eliminar chat
+            </button>
+            <button 
+              className="context-menu-item"
+              onClick={() => setShowChatMenu(null)}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal de amigos para nuevo chat */}
       {showFriendsModal && (

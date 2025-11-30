@@ -612,3 +612,27 @@ export async function configurarChat(idChat: number, configuracion: Configuracio
   const res = await api.put(`/chats/${idChat}/configuracion`, configuracion, { headers: getAuthHeaders() });
   return res.data;
 }
+// frontend/services/api.ts - AGREGAR ESTAS FUNCIONES
+
+// ================== ELIMINAR CHATS Y MENSAJES ==================
+
+// Eliminar mensaje
+export const eliminarMensaje = async (idChat: number, idMensaje: number): Promise<void> => {
+  await api.delete(`/chats/${idChat}/mensajes/${idMensaje}`, {
+    headers: getAuthHeaders(),
+  });
+};
+
+// Eliminar chat completo
+export const eliminarChat = async (idChat: number): Promise<void> => {
+  await api.delete(`/chats/${idChat}`, {
+    headers: getAuthHeaders(),
+  });
+};
+
+// Eliminar mensaje para todos
+export const eliminarMensajeParaTodos = async (idMensaje: number): Promise<void> => {
+  await api.delete(`/mensajes/${idMensaje}/para-todos`, {
+    headers: getAuthHeaders(),
+  });
+};

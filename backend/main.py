@@ -2448,7 +2448,99 @@ def configurar_chat(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error al configurar chat: {str(e)}")
 
+# backend/main.py - AGREGAR ESTOS ENDPOINTS
 
+# Eliminar mensaje
+@app.delete("/chats/{id_chat}/mensajes/{id_mensaje}")
+def eliminar_mensaje(
+    id_chat: int,
+    id_mensaje: int,
+    id_usuario: int = Header(..., alias="id_usuario"),
+    db: Session = Depends(get_db)
+):
+    try:
+        # Verificar que el usuario pertenece al chat y es el propietario del mensaje
+        mensaje = db.query(models.Mensaje).filter(
+            models.Mensaje.id_mensaje == id_mensaje,
+            models.Mensaje.id_chat == id_chat,
+            models.Mensaje.id_emisor == id_usuario  # Solo el propietario puede borrar
+        ).first()
+        
+        if not mensaje:
+            raise HTTPException(status_code=404, detail="Mensaje no encontrado o no tienes permisos")
+        
+        db.delete(mensaje)
+        db.commit()
+        
+        return {"message": "Mensaje eliminado correctamente"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al eliminar mensaje: {str(e)}")
+
+# Eliminar chat completo
+@app.delete("/chats/{id_chat}")
+def eliminar_chat(
+    id_chat: int,
+    id_usuario: int = Header(..., alias="id_usuario"),
+    db: Session = Depends(get_db)
+):
+    try:
+        # Verificar que el usuario pertenece al chat
+        chat = db.query(models.Chat).filter(
+            models.Chat.id_chat == id_chat,
+            (models.Chat.id_usuario1 == id_usuario) | (models.Chat.id_usuario2 == id_usuario)
+        ).first()
+        
+        if not chat:
+            raise HTTPException(status_code=404, detail="Chat no encontrado")
+        
+        # Primero eliminar todos los mensajes del chat
+        db.query(models.Mensaje).filter(
+            models.Mensaje.id_chat == id_chat
+        ).delete()
+        
+        # Luego eliminar el chat
+        db.delete(chat)
+        db.commit()
+        
+        return {"message": "Chat eliminado correctamente"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al eliminar chat: {str(e)}")
+
+# Eliminar mensaje para todos (solo para mensajes propios)
+@app.delete("/mensajes/{id_mensaje}/para-todos")
+def eliminar_mensaje_para_todos(
+    id_mensaje: int,
+    id_usuario: int = Header(..., alias="id_usuario"),
+    db: Session = Depends(get_db)
+):
+    try:
+        # Verificar que el usuario es el propietario del mensaje
+        mensaje = db.query(models.Mensaje).filter(
+            models.Mensaje.id_mensaje == id_mensaje,
+            models.Mensaje.id_emisor == id_usuario
+        ).first()
+        
+        if not mensaje:
+            raise HTTPException(status_code=404, detail="Mensaje no encontrado o no tienes permisos")
+        
+        db.delete(mensaje)
+        db.commit()
+        
+        return {"message": "Mensaje eliminado para todos correctamente"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al eliminar mensaje: {str(e)}")
     
 # ------------------ HOME ------------------
 @app.get("/home")
