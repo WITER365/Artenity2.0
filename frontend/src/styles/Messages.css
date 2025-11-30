@@ -504,3 +504,157 @@
   cursor: pointer;
   margin-top: 10px;
 }
+/* Agregar en Messages.css */
+
+.message-file {
+  max-width: 300px;
+  margin: 5px 0;
+}
+
+.chat-image {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.2s;
+  border: 1px solid #ddd;
+}
+
+.chat-image:hover {
+  transform: scale(1.02);
+}
+
+.chat-video {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+}
+
+.file-caption {
+  margin-top: 5px;
+  font-size: 0.8em;
+  color: #666;
+  word-break: break-all;
+}
+
+/* Mejorar el input de archivo */
+.btn-attach {
+  background: none;
+  border: none;
+  font-size: 1.2em;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.btn-attach:hover {
+  background-color: #f0f0f0;
+}
+
+.btn-attach:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Estilos para mensajes con archivos */
+.message-bubble .message-content img,
+.message-bubble .message-content video {
+  max-width: 100%;
+  border-radius: 8px;
+}
+
+.bubble-me .message-file {
+  text-align: right;
+}
+
+.bubble-other .message-file {
+  text-align: left;
+}
+/* Agregar en Messages.css */
+
+/* Previsualización de archivos */
+.file-preview {
+  border: 2px solid #6C63FF;
+  border-radius: 10px;
+  margin: 10px;
+  background: white;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.file-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  border-radius: 8px 8px 0 0;
+}
+
+.file-preview-header span {
+  font-weight: bold;
+  color: #6C63FF;
+}
+
+.btn-cancel-preview {
+  background: none;
+  border: none;
+  font-size: 1.5em;
+  cursor: pointer;
+  color: #dc3545;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-cancel-preview:hover {
+  background: #f8d7da;
+}
+
+.file-preview-content {
+  padding: 15px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.preview-image {
+  max-width: 300px;
+  max-height: 300px;
+  border-radius: 8px;
+}
+
+.preview-video {
+  max-width: 300px;
+  max-height: 300px;
+  border-radius: 8px;
+}
+
+.file-preview-info {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  background: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+  border-radius: 0 0 8px 8px;
+  font-size: 0.9em;
+  color: #666;
+}
+
+/* Botón de enviar cuando hay archivo */
+.btn-send-with-file {
+  background-color: #6C63FF !important;
+  color: white !important;
+}
+
+/* Ajustes para el input cuando hay previsualización */
+.chat-input-box input:disabled {
+  background-color: #f8f9fa;
+  opacity: 0.7;
+}

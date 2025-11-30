@@ -504,6 +504,7 @@ export const eliminarCompartido = async (idCompartido: number): Promise<void> =>
   await api.delete(`/compartidos/${idCompartido}`, { headers: getAuthHeaders() });
 };
 
+
 // ================== CHAT Y MENSAJES ==================
 
 export interface Chat {
@@ -546,14 +547,59 @@ export async function obtenerMensajesChat(idChat: number): Promise<Message[]> {
   return res.data;
 }
 
-// Enviar mensaje
-export async function enviarMensaje(idChat: number, contenido: string, tipo: string = "texto"): Promise<any> {
-  const res = await api.post(`/chats/${idChat}/mensajes`, 
-    { contenido, tipo }, 
-    { headers: getAuthHeaders() }
-  );
+// Enviar mensaje con archivo
+export const enviarMensajeArchivo = async (
+  idChat: number, 
+  archivo: File, 
+  tipo: string
+): Promise<any> => {
+  const formData = new FormData();
+  formData.append("archivo", archivo);
+  formData.append("tipo", tipo);
+
+  const res = await api.post(`/chats/${idChat}/mensajes/archivo`, formData, {
+    headers: {
+      ...getAuthHeaders(),
+      "Content-Type": "multipart/form-data",
+    },
+  });
   return res.data;
-}
+};
+
+// Enviar mensaje (texto o con archivo)
+export const enviarMensaje = async (
+  idChat: number, 
+  contenido: string, 
+  tipo: string = "texto",
+  archivo?: File
+): Promise<any> => {
+  if (archivo) {
+    // Si hay archivo, usar el endpoint de archivos
+    return await enviarMensajeArchivo(idChat, archivo, tipo);
+  } else {
+    // Si es texto normal, usar el endpoint original
+    const res = await api.post(`/chats/${idChat}/mensajes`, 
+      { contenido, tipo }, 
+      { headers: getAuthHeaders() }
+    );
+    return res.data;
+  }
+};
+
+export const enviarMensajeMejorado = async (
+  idChat: number, 
+  contenido: string, 
+  tipo: string = "texto",
+  archivo?: File
+): Promise<any> => {
+  if (archivo) {
+    // Si hay archivo, usar el endpoint de archivos
+    return await enviarMensajeArchivo(idChat, archivo, tipo);
+  } else {
+    // Si es texto normal, usar el endpoint original
+    return await enviarMensaje(idChat, contenido, tipo);
+  }
+};
 
 // Crear o obtener chat con usuario
 export async function crearObtenerChat(idUsuarioDestino: number): Promise<{id_chat: number, existed: boolean}> {

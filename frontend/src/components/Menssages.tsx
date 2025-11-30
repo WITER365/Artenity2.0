@@ -10,7 +10,8 @@ import {
   obtenerAmigos,
   Chat as ChatType,
   Message as MessageType,
-  ConfiguracionChat
+  ConfiguracionChat,
+  enviarMensajeArchivo
 } from "../services/api";
 
 interface User {
@@ -18,6 +19,12 @@ interface User {
   nombre_usuario: string;
   nombre_completo: string;
   foto_perfil?: string;
+}
+
+interface FilePreview {
+  file: File;
+  type: string;
+  url: string;
 }
 
 const Messages: React.FC = () => {
@@ -33,6 +40,8 @@ const Messages: React.FC = () => {
     color_burbuja: "#6C63FF"
   });
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [filePreview, setFilePreview] = useState<FilePreview | null>(null);
   
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -99,25 +108,113 @@ const Messages: React.FC = () => {
   };
 
   const handleSend = async () => {
-    if (newMessage.trim() === "" || !selectedChat) return;
+    if ((newMessage.trim() === "" && !filePreview) || !selectedChat) return;
 
     try {
-      const mensajeEnviado = await enviarMensaje(selectedChat.id, newMessage);
+      // Si hay un archivo para enviar, enviarlo primero
+      if (filePreview) {
+        await handleSendFile();
+      }
       
+      // Si hay mensaje de texto, enviarlo
+      if (newMessage.trim() !== "") {
+        const mensajeEnviado = await enviarMensaje(selectedChat.id, newMessage);
+        
+        setMessages(prev => [...prev, {
+          ...mensajeEnviado,
+          sender_id: parseInt(localStorage.getItem("usuario") ? JSON.parse(localStorage.getItem("usuario")!).id_usuario : "0"),
+          sender_username: "yo",
+          fecha: new Date().toISOString(),
+          leido: false
+        }]);
+        
+        setNewMessage("");
+      }
+      
+      await cargarChats();
+      
+    } catch (error) {
+      console.error("Error al enviar mensaje:", error);
+      alert("Error al enviar el mensaje. Intenta nuevamente.");
+    }
+  };
+
+  const handleSendFile = async () => {
+    if (!filePreview || !selectedChat) return;
+
+    try {
+      setUploading(true);
+
+      // Enviar archivo
+      const mensajeEnviado = await enviarMensajeArchivo(selectedChat.id, filePreview.file, filePreview.type);
+      
+      // Agregar mensaje a la lista
       setMessages(prev => [...prev, {
         ...mensajeEnviado,
+        sender: "yo",
         sender_id: parseInt(localStorage.getItem("usuario") ? JSON.parse(localStorage.getItem("usuario")!).id_usuario : "0"),
         sender_username: "yo",
         fecha: new Date().toISOString(),
         leido: false
       }]);
       
-      setNewMessage("");
-      await cargarChats();
+      // Limpiar previsualización
+      setFilePreview(null);
       
-    } catch (error) {
-      console.error("Error al enviar mensaje:", error);
-      alert("Error al enviar el mensaje. Intenta nuevamente.");
+    } catch (error: any) {
+      console.error("Error al enviar archivo:", error);
+      if (error.response?.status === 403) {
+        alert("Solo puedes enviar archivos a tus amigos");
+      } else if (error.response?.status === 400) {
+        alert(error.response.data.detail || "Error en el archivo");
+      } else {
+        alert("Error al enviar el archivo. Intenta nuevamente.");
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedChat) return;
+
+    // Determinar el tipo de archivo
+    const esImagen = file.type.startsWith('image/');
+    const esVideo = file.type.startsWith('video/');
+    
+    if (!esImagen && !esVideo) {
+      alert("Solo se permiten imágenes y videos");
+      return;
+    }
+
+    const tipo = esImagen ? "imagen" : "video";
+
+    // Verificar tamaño del archivo (50MB máximo)
+    if (file.size > 50 * 1024 * 1024) {
+      alert("El archivo es demasiado grande. Máximo 50MB");
+      return;
+    }
+
+    // Crear URL para previsualización
+    const url = URL.createObjectURL(file);
+    
+    setFilePreview({
+      file,
+      type: tipo,
+      url
+    });
+
+    // Limpiar input de archivo
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const cancelFilePreview = () => {
+    if (filePreview) {
+      URL.revokeObjectURL(filePreview.url);
+      setFilePreview(null);
     }
   };
 
@@ -128,24 +225,37 @@ const Messages: React.FC = () => {
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !selectedChat) return;
-
-    const esAmigo = amigos.some(amigo => 
-      amigo.nombre_usuario === selectedChat.username
-    );
-
-    if (!esAmigo) {
-      alert("Solo puedes enviar archivos a tus amigos");
-      return;
-    }
-
-    console.log("Archivo seleccionado:", file.name);
-    alert("Funcionalidad de subida de archivos en desarrollo");
-    
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+  // Renderizar mensajes con archivos
+  const renderMessageContent = (msg: MessageType) => {
+    if (msg.tipo === "texto") {
+      return msg.text;
+    } else if (msg.tipo === "imagen" && msg.archivo_url) {
+      return (
+        <div className="message-file">
+          <img 
+            src={`http://localhost:8000${msg.archivo_url}`} 
+            alt="Imagen enviada" 
+            className="chat-image"
+            onClick={() => window.open(`http://localhost:8000${msg.archivo_url}`, '_blank')}
+          />
+          <div className="file-caption">{msg.text}</div>
+        </div>
+      );
+    } else if (msg.tipo === "video" && msg.archivo_url) {
+      return (
+        <div className="message-file">
+          <video 
+            controls 
+            className="chat-video"
+            src={`http://localhost:8000${msg.archivo_url}`}
+          >
+            Tu navegador no soporta el elemento video.
+          </video>
+          <div className="file-caption">{msg.text}</div>
+        </div>
+      );
+    } else {
+      return <div className="message-file">📎 Archivo no disponible</div>;
     }
   };
 
@@ -320,13 +430,7 @@ const Messages: React.FC = () => {
                       </div>
                     )}
                     <div className="message-content">
-                      {msg.tipo === "texto" ? (
-                        msg.text
-                      ) : (
-                        <div className="message-file">
-                          📎 Archivo: {msg.archivo_url || "archivo"}
-                        </div>
-                      )}
+                      {renderMessageContent(msg)}
                     </div>
                     <div className="message-time">
                       {new Date(msg.fecha).toLocaleTimeString([], { 
@@ -340,30 +444,63 @@ const Messages: React.FC = () => {
               <div ref={messagesEndRef} />
             </div>
 
+            {/* Previsualización de archivo */}
+            {filePreview && (
+              <div className="file-preview">
+                <div className="file-preview-header">
+                  <span>Vista previa - {filePreview.type === 'imagen' ? 'Imagen' : 'Video'}</span>
+                  <button 
+                    className="btn-cancel-preview"
+                    onClick={cancelFilePreview}
+                    title="Cancelar"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="file-preview-content">
+                  {filePreview.type === 'imagen' ? (
+                    <img src={filePreview.url} alt="Vista previa" className="preview-image" />
+                  ) : (
+                    <video src={filePreview.url} controls className="preview-video" />
+                  )}
+                </div>
+                <div className="file-preview-info">
+                  <span>{filePreview.file.name}</span>
+                  <span>{Math.round(filePreview.file.size / 1024)} KB</span>
+                </div>
+              </div>
+            )}
+
             <div className="chat-input-box">
               <input
                 type="file"
                 ref={fileInputRef}
                 style={{ display: 'none' }}
-                onChange={handleFileUpload}
+                onChange={handleFileSelect}
                 accept="image/*,video/*"
               />
               <button 
                 className="btn-attach"
                 onClick={() => fileInputRef.current?.click()}
                 title="Adjuntar archivo"
+                disabled={uploading}
               >
-                📎
+                {uploading ? "⏳" : "📎"}
               </button>
               <input
                 type="text"
-                placeholder="Escribe un mensaje..."
+                placeholder={filePreview ? "Escribe un mensaje opcional..." : "Escribe un mensaje..."}
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
+                disabled={uploading}
               />
-              <button onClick={handleSend} disabled={!newMessage.trim()}>
-                Enviar
+              <button 
+                onClick={handleSend} 
+                disabled={(newMessage.trim() === "" && !filePreview) || uploading}
+                className={filePreview ? "btn-send-with-file" : ""}
+              >
+                {uploading ? "Enviando..." : filePreview ? "Enviar archivo" : "Enviar"}
               </button>
             </div>
           </>
