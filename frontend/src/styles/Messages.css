@@ -722,3 +722,93 @@
 .chat-card.active:hover {
   background-color: #e9ecef;
 }
+/* Agregar en Messages.css */
+
+/* Botón de casa */
+.btn-home {
+  background: none;
+  border: none;
+  font-size: 1.5em;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+  margin-right: 10px;
+}
+
+.btn-home:hover {
+  background-color: #f0f0f0;
+}
+
+.btn-home-mobile {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.3em;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+  margin-right: 10px;
+}
+
+.btn-home-large {
+  background: none;
+  border: none;
+  font-size: 3em;
+  cursor: pointer;
+  padding: 20px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+  margin-bottom: 20px;
+}
+
+.btn-home-large:hover {
+  background-color: #f0f0f0;
+}
+
+/* Header de chats mejorado */
+.chats-header-top {
+  display: flex;
+  align-items: center;
+}
+
+.chats-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.chats-header h2 {
+  margin: 0;
+  font-size: 1.5em;
+  color: #333;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .btn-home {
+    display: none;
+  }
+  
+  .btn-home-mobile {
+    display: block;
+  }
+  
+  .chats-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .chats-header-top {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+/* Eliminar el panel derecho de iconos si existe */
+.sidebar-icons {
+  display: none;
+}

@@ -1,4 +1,4 @@
-// frontend/components/Messages.tsx - VERSIÓN COMPLETA CON FUNCIONALIDAD DE ELIMINAR
+// frontend/components/Messages.tsx
 import React, { useState, useEffect, useRef } from "react";
 import "../styles/Messages.css";
 import { useNavigate } from "react-router-dom";
@@ -123,6 +123,11 @@ const Messages: React.FC = () => {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // Función para ir a la página principal
+  const goToHome = () => {
+    navigate("/principal");
   };
 
   const handleSend = async () => {
@@ -403,7 +408,16 @@ const Messages: React.FC = () => {
       {/* Panel izquierdo - Lista de chats */}
       <div className="sidebar-chats">
         <div className="chats-header">
-          <h2>Mensajes</h2>
+          <div className="chats-header-top">
+            <button 
+              className="btn-home"
+              onClick={goToHome}
+              title="Ir a la página principal"
+            >
+              🏠
+            </button>
+            <h2>Mensajes</h2>
+          </div>
           <button 
             className="btn-new-chat"
             onClick={() => setShowFriendsModal(true)}
@@ -488,6 +502,13 @@ const Messages: React.FC = () => {
                 </div>
               </div>
               <div className="chat-actions">
+                <button 
+                  className="btn-home-mobile"
+                  onClick={goToHome}
+                  title="Ir a la página principal"
+                >
+                  🏠
+                </button>
                 <button 
                   className="btn-config"
                   onClick={() => setShowConfigModal(true)}
@@ -597,6 +618,13 @@ const Messages: React.FC = () => {
         ) : (
           <div className="empty-chat">
             <div className="empty-chat-content">
+              <button 
+                className="btn-home-large"
+                onClick={goToHome}
+                title="Ir a la página principal"
+              >
+                🏠
+              </button>
               <h3>Selecciona un chat</h3>
               <p>Elige una conversación de la lista o inicia una nueva</p>
               <button 
@@ -779,22 +807,7 @@ const Messages: React.FC = () => {
         </div>
       )}
 
-      {/* Panel derecho de iconos */}
-      <div className="sidebar-icons">
-        <div className="icons-group">
-          <i className="fas fa-bell"></i>
-          <i className="fas fa-user"></i>
-          <i className="fas fa-comments"></i>
-          <i className="fas fa-cog"></i>
-        </div>
-
-        <div className="icons-group">
-          <i className="fas fa-home" onClick={() => navigate("/principal")}></i>
-          <i className="fas fa-search"></i>
-          <i className="fas fa-th"></i>
-          <i className="fas fa-image"></i>
-        </div>
-      </div>
+      {/* Panel derecho de iconos - ELIMINADO para simplificar */}
     </div>
   );
 };
