@@ -5,7 +5,6 @@ import brushImg from "../assets/img/loginmusic.png";
 import logoImg from "../assets/img/logo.png";
 import googleImg from "../assets/img/google.png";
 import facebookImg from "../assets/img/facebook.png";
-import appleImg from "../assets/img/apple.png";
 import discordImg from "../assets/img/discord.png";
 import instagramImg from "../assets/img/instagram.png";
 import { loginUsuario } from "../services/api";
@@ -78,7 +77,6 @@ const Login: React.FC = () => {
         <div className="social-icons">
           <img src={googleImg} alt="Google" />
           <img src={facebookImg} alt="Facebook" />
-          <img src={appleImg} alt="Apple" />
           <img src={discordImg} alt="Discord" />
           <img src={instagramImg} alt="Instagram" />
         </div>
