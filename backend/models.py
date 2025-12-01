@@ -306,7 +306,10 @@ class MensajeEliminado(Base):
     # Relaciones
     mensaje = relationship("Mensaje")
     usuario = relationship("Usuario")
-    # backend/models.py - AGREGAR EL MODELO ConfiguracionChat
+
+
+    # backend/models.py - MODELO ConfiguracionChat
+
 
 class ConfiguracionChat(Base):
     __tablename__ = "configuraciones_chat"
@@ -316,6 +319,7 @@ class ConfiguracionChat(Base):
     id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario"), nullable=False)
     fondo_chat = Column(String(50), default="default")
     color_burbuja = Column(String(7), default="#6C63FF")  # Formato HEX
+    fondo_personalizado = Column(String(500), nullable=True)
     fecha_actualizacion = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relaciones

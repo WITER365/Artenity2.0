@@ -237,3 +237,18 @@ class NotificacionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+# backend/schemas.py - ESQUEMAS PARA CONFIGURACIÓN
+
+class ConfiguracionChatBase(BaseModel):
+    fondo_chat: str = "default"
+    color_burbuja: str = "#6C63FF"
+
+class ConfiguracionChatUpdate(ConfiguracionChatBase):
+    pass
+
+class ConfiguracionChatResponse(ConfiguracionChatBase):
+    fondo_personalizado: Optional[str] = None
+    
+    class Config:
+        from_attributes = True

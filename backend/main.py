@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session, joinedload
 from backend import database, models, schemas
 from backend.config import settings
 from backend.database import get_db
-from backend.schemas import ForgotPasswordRequest, ResetPasswordRequest
+from backend.schemas import ForgotPasswordRequest, ResetPasswordRequest, ConfiguracionChatUpdate
 
 app = FastAPI()
 
@@ -52,6 +52,7 @@ os.makedirs("static/perfiles", exist_ok=True)
 os.makedirs("static/posts", exist_ok=True)
 os.makedirs("static/chat_files/images", exist_ok=True)  # Nuevo directorio para imágenes de chat
 os.makedirs("static/chat_files/videos", exist_ok=True)  # Nuevo directorio para videos de chat
+os.makedirs("static/chat_fondos", exist_ok=True)
 
 # ------------------ STATIC FILES ------------------
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -2583,13 +2584,12 @@ def diagnostico_mensajes_eliminados(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en diagnóstico: {str(e)}")
     
-# backend/main.py - MODIFICAR LOS ENDPOINTS DE CONFIGURACIÓN
+# backend/main.py - ENDPOINTS PARA CONFIGURACIÓN DE CHAT
 
-# Configurar chat - GUARDAR EN BASE DE DATOS
 @app.put("/chats/{id_chat}/configuracion")
-def configurar_chat(
+def actualizar_configuracion_chat(
     id_chat: int,
-    config: ConfiguracionChat,
+    configuracion: ConfiguracionChatUpdate,
     id_usuario: int = Header(..., alias="id_usuario"),
     db: Session = Depends(get_db)
 ):
@@ -2603,7 +2603,7 @@ def configurar_chat(
         if not chat:
             raise HTTPException(status_code=404, detail="Chat no encontrado")
         
-        # Buscar si ya existe una configuración para este usuario y chat
+        # Buscar configuración existente
         config_existente = db.query(models.ConfiguracionChat).filter(
             models.ConfiguracionChat.id_chat == id_chat,
             models.ConfiguracionChat.id_usuario == id_usuario
@@ -2611,30 +2611,29 @@ def configurar_chat(
         
         if config_existente:
             # Actualizar configuración existente
-            config_existente.fondo_chat = config.fondo_chat
-            config_existente.color_burbuja = config.color_burbuja
+            config_existente.fondo_chat = configuracion.fondo_chat
+            config_existente.color_burbuja = configuracion.color_burbuja
             config_existente.fecha_actualizacion = datetime.utcnow()
         else:
             # Crear nueva configuración
             nueva_config = models.ConfiguracionChat(
                 id_chat=id_chat,
                 id_usuario=id_usuario,
-                fondo_chat=config.fondo_chat,
-                color_burbuja=config.color_burbuja
+                fondo_chat=configuracion.fondo_chat,
+                color_burbuja=configuracion.color_burbuja
             )
             db.add(nueva_config)
         
         db.commit()
         
-        return {"message": "Configuración guardada correctamente"}
+        return {"message": "Configuración actualizada correctamente"}
         
     except HTTPException:
         raise
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error al configurar chat: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al actualizar configuración: {str(e)}")
 
-# Obtener configuración del chat
 @app.get("/chats/{id_chat}/configuracion")
 def obtener_configuracion_chat(
     id_chat: int,
@@ -2651,7 +2650,7 @@ def obtener_configuracion_chat(
         if not chat:
             raise HTTPException(status_code=404, detail="Chat no encontrado")
         
-        # Buscar configuración existente
+        # Buscar configuración
         config = db.query(models.ConfiguracionChat).filter(
             models.ConfiguracionChat.id_chat == id_chat,
             models.ConfiguracionChat.id_usuario == id_usuario
@@ -2660,19 +2659,139 @@ def obtener_configuracion_chat(
         if config:
             return {
                 "fondo_chat": config.fondo_chat,
-                "color_burbuja": config.color_burbuja
+                "color_burbuja": config.color_burbuja,
+                "fondo_personalizado": config.fondo_personalizado
             }
         else:
             # Retornar configuración por defecto
             return {
                 "fondo_chat": "default",
-                "color_burbuja": "#6C63FF"
+                "color_burbuja": "#6C63FF",
+                "fondo_personalizado": None
             }
-        
+            
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener configuración: {str(e)}")
+    
+@app.post("/chats/{id_chat}/fondo-personalizado")
+async def subir_fondo_personalizado(
+    id_chat: int,
+    fondo: UploadFile = File(...),
+    id_usuario: int = Header(..., alias="id_usuario"),
+    db: Session = Depends(get_db)
+):
+    try:
+        # Verificar que el usuario pertenece al chat
+        chat = db.query(models.Chat).filter(
+            models.Chat.id_chat == id_chat,
+            (models.Chat.id_usuario1 == id_usuario) | (models.Chat.id_usuario2 == id_usuario)
+        ).first()
+        
+        if not chat:
+            raise HTTPException(status_code=404, detail="Chat no encontrado")
+        
+        # Validar que sea una imagen
+        if not fondo.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="Solo se permiten imágenes")
+        
+        # Validar tamaño (máximo 10MB)
+        contenido = await fondo.read()
+        if len(contenido) > 10 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="La imagen es demasiado grande. Máximo 10MB")
+        
+        # Reiniciar la posición del archivo
+        await fondo.seek(0)
+        
+        # Generar nombre único
+        file_extension = fondo.filename.split('.')[-1]
+        unique_filename = f"fondo_chat_{id_chat}_{id_usuario}_{uuid.uuid4()}.{file_extension}"
+        file_path = f"static/chat_fondos/{unique_filename}"
+        
+        # Guardar archivo
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(fondo.file, buffer)
+        
+        fondo_url = f"/{file_path}"
+        
+        # Buscar configuración existente
+        config_existente = db.query(models.ConfiguracionChat).filter(
+            models.ConfiguracionChat.id_chat == id_chat,
+            models.ConfiguracionChat.id_usuario == id_usuario
+        ).first()
+        
+        if config_existente:
+            # Eliminar fondo anterior si existe
+            if config_existente.fondo_personalizado:
+                fondo_anterior = config_existente.fondo_personalizado.replace('/', '', 1)
+                if os.path.exists(fondo_anterior):
+                    os.remove(fondo_anterior)
+            
+            # Actualizar configuración
+            config_existente.fondo_chat = "personalizado"
+            config_existente.fondo_personalizado = fondo_url
+            config_existente.fecha_actualizacion = datetime.utcnow()
+        else:
+            # Crear nueva configuración
+            nueva_config = models.ConfiguracionChat(
+                id_chat=id_chat,
+                id_usuario=id_usuario,
+                fondo_chat="personalizado",
+                fondo_personalizado=fondo_url
+            )
+            db.add(nueva_config)
+        
+        db.commit()
+        
+        return {
+            "message": "Fondo personalizado guardado correctamente",
+            "fondo_url": fondo_url,
+            "fondo_chat": "personalizado"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al subir fondo: {str(e)}")
+
+# Eliminar fondo personalizado
+@app.delete("/chats/{id_chat}/fondo-personalizado")
+def eliminar_fondo_personalizado(
+    id_chat: int,
+    id_usuario: int = Header(..., alias="id_usuario"),
+    db: Session = Depends(get_db)
+):
+    try:
+        # Buscar configuración
+        config = db.query(models.ConfiguracionChat).filter(
+            models.ConfiguracionChat.id_chat == id_chat,
+            models.ConfiguracionChat.id_usuario == id_usuario
+        ).first()
+        
+        if not config or not config.fondo_personalizado:
+            raise HTTPException(status_code=404, detail="No hay fondo personalizado para eliminar")
+        
+        # Eliminar archivo físico
+        fondo_path = config.fondo_personalizado.replace('/', '', 1)
+        if os.path.exists(fondo_path):
+            os.remove(fondo_path)
+        
+        # Actualizar configuración
+        config.fondo_personalizado = None
+        config.fondo_chat = "default"
+        config.fecha_actualizacion = datetime.utcnow()
+        
+        db.commit()
+        
+        return {"message": "Fondo personalizado eliminado correctamente"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al eliminar fondo: {str(e)}")
 
 # ------------------ HOME ------------------
 @app.get("/home")

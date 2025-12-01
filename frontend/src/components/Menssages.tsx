@@ -8,7 +8,9 @@ import {
   enviarMensaje, 
   crearObtenerChat,
   configurarChat,
-  obtenerConfiguracionChat, // IMPORTAR ESTA FUNCIÓN
+  obtenerConfiguracionChat,
+  subirFondoPersonalizado,
+  eliminarFondoPersonalizado,
   obtenerAmigos,
   eliminarMensaje,
   eliminarChat,
@@ -48,11 +50,14 @@ const Messages: React.FC = () => {
   });
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadingBackground, setUploadingBackground] = useState(false);
   const [filePreview, setFilePreview] = useState<FilePreview | null>(null);
+  const [backgroundPreview, setBackgroundPreview] = useState<string | null>(null);
   
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const backgroundInputRef = useRef<HTMLInputElement>(null);
   const chatListRef = useRef<HTMLDivElement>(null);
 
   // Cargar chats y amigos
@@ -65,7 +70,7 @@ const Messages: React.FC = () => {
   useEffect(() => {
     if (selectedChat) {
       cargarMensajes(selectedChat.id);
-      cargarConfiguracionChat(); // Ahora carga desde el servidor
+      cargarConfiguracionChat();
     }
   }, [selectedChat]);
 
@@ -108,27 +113,22 @@ const Messages: React.FC = () => {
 
   const cargarMensajes = async (chatId: number) => {
     try {
-      console.log("Cargando mensajes para chat:", chatId);
       const mensajesData = await obtenerMensajesChat(chatId);
-      console.log("Mensajes recibidos:", mensajesData);
       setMessages(mensajesData);
     } catch (error) {
       console.error("Error cargando mensajes:", error);
     }
   };
 
-  // NUEVA FUNCIÓN: Cargar configuración desde el servidor
   const cargarConfiguracionChat = async () => {
     if (!selectedChat) return;
     
     try {
-      console.log("Cargando configuración para chat:", selectedChat.id);
       const configData = await obtenerConfiguracionChat(selectedChat.id);
-      console.log("Configuración cargada del servidor:", configData);
       setChatConfig(configData);
+      setBackgroundPreview(null);
     } catch (error) {
       console.error("Error cargando configuración:", error);
-      // Si hay error, usar configuración por defecto
       setChatConfig({
         fondo_chat: "default",
         color_burbuja: "#6C63FF"
@@ -140,7 +140,6 @@ const Messages: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Función para ir a la página principal
   const goToHome = () => {
     navigate("/principal");
   };
@@ -149,12 +148,10 @@ const Messages: React.FC = () => {
     if ((newMessage.trim() === "" && !filePreview) || !selectedChat) return;
 
     try {
-      // Si hay un archivo para enviar, enviarlo primero
       if (filePreview) {
         await handleSendFile();
       }
       
-      // Si hay mensaje de texto, enviarlo
       if (newMessage.trim() !== "") {
         const mensajeEnviado = await enviarMensaje(selectedChat.id, newMessage);
         
@@ -182,11 +179,8 @@ const Messages: React.FC = () => {
 
     try {
       setUploading(true);
-
-      // Enviar archivo
       const mensajeEnviado = await enviarMensajeArchivo(selectedChat.id, filePreview.file, filePreview.type);
       
-      // Agregar mensaje a la lista
       setMessages(prev => [...prev, {
         ...mensajeEnviado,
         sender: "yo",
@@ -196,7 +190,6 @@ const Messages: React.FC = () => {
         leido: false
       }]);
       
-      // Limpiar previsualización
       setFilePreview(null);
       
     } catch (error: any) {
@@ -217,7 +210,6 @@ const Messages: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file || !selectedChat) return;
 
-    // Determinar el tipo de archivo
     const esImagen = file.type.startsWith('image/');
     const esVideo = file.type.startsWith('video/');
     
@@ -228,13 +220,11 @@ const Messages: React.FC = () => {
 
     const tipo = esImagen ? "imagen" : "video";
 
-    // Verificar tamaño del archivo (50MB máximo)
     if (file.size > 50 * 1024 * 1024) {
       alert("El archivo es demasiado grande. Máximo 50MB");
       return;
     }
 
-    // Crear URL para previsualización
     const url = URL.createObjectURL(file);
     
     setFilePreview({
@@ -243,9 +233,77 @@ const Messages: React.FC = () => {
       url
     });
 
-    // Limpiar input de archivo
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+    }
+  };
+
+  // NUEVA FUNCIÓN: Manejar selección de fondo personalizado
+  const handleBackgroundSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedChat) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert("Solo se permiten imágenes para el fondo");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("La imagen de fondo es demasiado grande. Máximo 10MB");
+      return;
+    }
+
+    try {
+      setUploadingBackground(true);
+      
+      // Crear vista previa
+      const url = URL.createObjectURL(file);
+      setBackgroundPreview(url);
+      
+      // Subir al servidor
+      const resultado = await subirFondoPersonalizado(selectedChat.id, file);
+      
+      // Actualizar configuración
+      setChatConfig(prev => ({
+        ...prev,
+        fondo_chat: "personalizado",
+        fondo_personalizado: resultado.fondo_url
+      }));
+      
+      console.log("Fondo personalizado guardado:", resultado);
+      
+    } catch (error: any) {
+      console.error("Error subiendo fondo:", error);
+      alert(error.response?.data?.detail || "Error al subir el fondo personalizado");
+      setBackgroundPreview(null);
+    } finally {
+      setUploadingBackground(false);
+      if (backgroundInputRef.current) {
+        backgroundInputRef.current.value = "";
+      }
+    }
+  };
+
+  // NUEVA FUNCIÓN: Eliminar fondo personalizado
+  const handleRemoveBackground = async () => {
+    if (!selectedChat) return;
+
+    try {
+      await eliminarFondoPersonalizado(selectedChat.id);
+      
+      setChatConfig(prev => ({
+        ...prev,
+        fondo_chat: "default",
+        fondo_personalizado: undefined
+      }));
+      
+      setBackgroundPreview(null);
+      
+      console.log("Fondo personalizado eliminado");
+      
+    } catch (error: any) {
+      console.error("Error eliminando fondo:", error);
+      alert("Error al eliminar el fondo personalizado");
     }
   };
 
@@ -291,31 +349,16 @@ const Messages: React.FC = () => {
   const handleDeleteMessage = async (message: MessageType) => {
     if (!selectedChat) return;
 
-    console.log("Eliminando mensaje para mí:", {
-      messageId: message.id,
-      chatId: selectedChat.id,
-      isMyMessage: message.sender === "yo"
-    });
-
     try {
-      const resultado = await eliminarMensaje(selectedChat.id, message.id);
-      console.log("Respuesta del servidor:", resultado);
-      
-      // Actualizar la lista de mensajes localmente
+      await eliminarMensaje(selectedChat.id, message.id);
       setMessages(prev => prev.filter(m => m.id !== message.id));
       setShowDeleteMenu(null);
-      
-      console.log("Mensaje eliminado localmente, mensajes restantes:", messages.length - 1);
-      
     } catch (error: any) {
-      console.error("Error completo eliminando mensaje:", error);
-      console.error("Response data:", error.response?.data);
-      console.error("Status:", error.response?.status);
-      
+      console.error("Error eliminando mensaje:", error);
       if (error.response?.status === 404) {
         alert("El mensaje no existe o no tienes permisos para eliminarlo");
       } else {
-        alert("Error al eliminar el mensaje: " + (error.response?.data?.detail || error.message));
+        alert("Error al eliminar el mensaje");
       }
     }
   };
@@ -340,7 +383,6 @@ const Messages: React.FC = () => {
       setChats(prev => prev.filter(c => c.id !== chat.id));
       setShowChatMenu(null);
       
-      // Si el chat eliminado era el seleccionado, limpiar selección
       if (selectedChat?.id === chat.id) {
         setSelectedChat(null);
         setMessages([]);
@@ -414,26 +456,21 @@ const Messages: React.FC = () => {
     }
   };
 
-  // MODIFICADO: Guardar configuración en el servidor
+  // Guardar configuración
   const handleSaveConfig = async () => {
     if (!selectedChat) return;
 
     try {
-      console.log("Guardando configuración:", chatConfig);
       await configurarChat(selectedChat.id, chatConfig);
       setShowConfigModal(false);
       
-      // Actualizar el chat seleccionado con el nuevo color
       setSelectedChat(prev => prev ? {...prev, color: chatConfig.color_burbuja} : null);
       
-      // Actualizar la lista de chats para reflejar el nuevo color
       setChats(prev => prev.map(chat => 
         chat.id === selectedChat.id 
           ? {...chat, color: chatConfig.color_burbuja}
           : chat
       ));
-      
-      console.log("Configuración guardada exitosamente");
       
     } catch (error) {
       console.error("Error guardando configuración:", error);
@@ -441,14 +478,64 @@ const Messages: React.FC = () => {
     }
   };
 
-  const getChatBackground = () => {
-    switch (chatConfig.fondo_chat) {
-      case "dark": return "#1a1a1a";
-      case "blue": return "#0d47a1";
-      case "green": return "#1b5e20";
-      default: return "#ffffff";
-    }
-  };
+  // Obtener estilo de fondo del chat
+ // Actualizar la función getChatBackground
+const getChatBackground = () => {
+  if (chatConfig.fondo_chat === "personalizado" && chatConfig.fondo_personalizado) {
+    return {
+      backgroundImage: `url(http://localhost:8000${chatConfig.fondo_personalizado})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat'
+    };
+  }
+
+  switch (chatConfig.fondo_chat) {
+    case "light-gray": 
+      return { backgroundColor: "#f5f5f5" };
+    case "dark": 
+      return { backgroundColor: "#1a1a1a" };
+    case "blue": 
+      return { backgroundColor: "#0d47a1" };
+    case "green": 
+      return { backgroundColor: "#1b5e20" };
+    case "purple": 
+      return { backgroundColor: "#4a148c" };
+    case "pink": 
+      return { backgroundColor: "#880e4f" };
+    case "orange": 
+      return { backgroundColor: "#e65100" };
+    case "gradient-blue":
+      return { 
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" 
+      };
+    case "gradient-sunset":
+      return { 
+        background: "linear-gradient(135deg, #ff6b6b 0%, #feca57 50%, #48dbfb 100%)" 
+      };
+    case "gradient-forest":
+      return { 
+        background: "linear-gradient(135deg, #0ba360 0%, #3cba92 100%)" 
+      };
+    case "pattern-dots":
+      return { 
+        backgroundColor: "#f0f0f0",
+        backgroundImage: `radial-gradient(#6C63FF 1px, transparent 1px)`,
+        backgroundSize: '20px 20px'
+      };
+    case "pattern-grid":
+      return { 
+        backgroundColor: "#ffffff",
+        backgroundImage: `
+          linear-gradient(#e0e0e0 1px, transparent 1px),
+          linear-gradient(90deg, #e0e0e0 1px, transparent 1px)
+        `,
+        backgroundSize: '20px 20px'
+      };
+    default: 
+      return { backgroundColor: "#ffffff" };
+  }
+};
 
   return (
     <div className="messages-layout">
@@ -528,7 +615,7 @@ const Messages: React.FC = () => {
       {/* Panel central - Chat */}
       <div 
         className="chat-panel"
-        style={{ backgroundColor: getChatBackground() }}
+        style={getChatBackground()}
       >
         {selectedChat ? (
           <>
@@ -752,107 +839,208 @@ const Messages: React.FC = () => {
       )}
 
       {/* Modal de amigos para nuevo chat */}
-      {showFriendsModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3>Selecciona un amigo para chatear</h3>
+      {showConfigModal && (
+  <div className="modal-overlay">
+    <div className="modal-content config-modal">
+      <div className="modal-header">
+        <h3>Configuración del chat</h3>
+        <button 
+          className="btn-close"
+          onClick={() => setShowConfigModal(false)}
+        >
+          ×
+        </button>
+      </div>
+      
+      <div className="config-options">
+        {/* Sección: Fondo del chat */}
+        <div className="config-section">
+          <h4>Fondo del chat</h4>
+          
+          {/* Fondos predefinidos */}
+          <div className="config-group">
+            <label>Fondo predefinido:</label>
+            <select 
+              value={chatConfig.fondo_chat}
+              onChange={(e) => setChatConfig(prev => ({
+                ...prev,
+                fondo_chat: e.target.value
+              }))}
+            >
+              <option value="default">Predeterminado (Blanco)</option>
+              <option value="light-gray">Gris claro</option>
+              <option value="dark">Oscuro</option>
+              <option value="blue">Azul</option>
+              <option value="green">Verde</option>
+              <option value="purple">Púrpura</option>
+              <option value="pink">Rosa</option>
+              <option value="orange">Naranja</option>
+              <option value="gradient-blue">Gradiente Azul</option>
+              <option value="gradient-sunset">Gradiente Atardecer</option>
+              <option value="gradient-forest">Gradiente Bosque</option>
+              <option value="pattern-dots">Patrón: Puntos</option>
+              <option value="pattern-grid">Patrón: Cuadrícula</option>
+            </select>
+          </div>
+
+          {/* Fondo personalizado */}
+          <div className="config-group">
+            <label>Fondo personalizado:</label>
+            <div className="custom-background-options">
+              <input
+                type="file"
+                ref={backgroundInputRef}
+                style={{ display: 'none' }}
+                onChange={handleBackgroundSelect}
+                accept="image/*"
+              />
               <button 
-                className="btn-close"
-                onClick={() => setShowFriendsModal(false)}
+                className="btn-upload-background"
+                onClick={() => backgroundInputRef.current?.click()}
+                disabled={uploadingBackground}
               >
-                ×
+                {uploadingBackground ? "Subiendo..." : "Subir imagen"}
               </button>
-            </div>
-            <div className="friends-list">
-              {amigos.length === 0 ? (
-                <p>No tienes amigos agregados</p>
-              ) : (
-                amigos.map((amigo) => (
-                  <div
-                    key={amigo.id_usuario}
-                    className="friend-item"
-                    onClick={() => handleStartChat(amigo)}
-                  >
-                    <div className="friend-avatar">
-                      {amigo.foto_perfil ? (
-                        <img src={amigo.foto_perfil} alt={amigo.nombre_usuario} />
-                      ) : (
-                        <div className="avatar-placeholder">
-                          {amigo.nombre_usuario.charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                    </div>
-                    <div className="friend-info">
-                      <span className="friend-username">@{amigo.nombre_usuario}</span>
-                      <span className="friend-name">{amigo.nombre_completo}</span>
-                    </div>
-                  </div>
-                ))
+              
+              {(chatConfig.fondo_personalizado || backgroundPreview) && (
+                <button 
+                  className="btn-remove-background"
+                  onClick={handleRemoveBackground}
+                >
+                  Eliminar fondo personalizado
+                </button>
               )}
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de configuración del chat */}
-      {showConfigModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3>Configuración del chat</h3>
-              <button 
-                className="btn-close"
-                onClick={() => setShowConfigModal(false)}
-              >
-                ×
-              </button>
-            </div>
-            <div className="config-options">
-              <div className="config-group">
-                <label>Fondo del chat:</label>
-                <select 
-                  value={chatConfig.fondo_chat}
-                  onChange={(e) => setChatConfig(prev => ({
-                    ...prev,
-                    fondo_chat: e.target.value
-                  }))}
-                >
-                  <option value="default">Predeterminado</option>
-                  <option value="dark">Oscuro</option>
-                  <option value="blue">Azul</option>
-                  <option value="green">Verde</option>
-                </select>
-              </div>
-              <div className="config-group">
-                <label>Color de tus mensajes:</label>
-                <input
-                  type="color"
-                  value={chatConfig.color_burbuja}
-                  onChange={(e) => setChatConfig(prev => ({
-                    ...prev,
-                    color_burbuja: e.target.value
-                  }))}
+            
+            {/* Vista previa del fondo personalizado */}
+            {(chatConfig.fondo_personalizado || backgroundPreview) && (
+              <div className="background-preview">
+                <p>Vista previa del fondo:</p>
+                <div 
+                  className="preview-container"
+                  style={{
+                    backgroundImage: `url(${backgroundPreview || `http://localhost:8000${chatConfig.fondo_personalizado}`})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center'
+                  }}
                 />
+                <small>Imagen se ajustará automáticamente al chat</small>
               </div>
-            </div>
-            <div className="modal-actions">
-              <button 
-                className="btn-cancel"
-                onClick={() => setShowConfigModal(false)}
-              >
-                Cancelar
-              </button>
-              <button 
-                className="btn-save"
-                onClick={handleSaveConfig}
-              >
-                Guardar
-              </button>
+            )}
+          </div>
+
+          {/* Vista previa de fondos predefinidos */}
+          <div className="background-previews">
+            <p>Vista previa de fondos:</p>
+            <div className="preview-grid">
+              {[
+                { value: "default", name: "Predeterminado", color: "#ffffff" },
+                { value: "light-gray", name: "Gris", color: "#f5f5f5" },
+                { value: "dark", name: "Oscuro", color: "#1a1a1a" },
+                { value: "blue", name: "Azul", color: "#0d47a1" },
+                { value: "green", name: "Verde", color: "#1b5e20" },
+                { value: "purple", name: "Púrpura", color: "#4a148c" }
+              ].map(bg => (
+                <div
+                  key={bg.value}
+                  className={`preview-item ${chatConfig.fondo_chat === bg.value ? 'selected' : ''}`}
+                  onClick={() => setChatConfig(prev => ({ ...prev, fondo_chat: bg.value }))}
+                  style={{ backgroundColor: bg.color }}
+                  title={bg.name}
+                />
+              ))}
             </div>
           </div>
         </div>
-      )}
+
+        {/* Sección: Colores de mensajes */}
+        <div className="config-section">
+          <h4>Colores de mensajes</h4>
+          
+          <div className="config-group">
+            <label>Color de tus mensajes:</label>
+            <div className="color-picker-container">
+              <input
+                type="color"
+                value={chatConfig.color_burbuja}
+                onChange={(e) => setChatConfig(prev => ({
+                  ...prev,
+                  color_burbuja: e.target.value
+                }))}
+                className="color-picker"
+              />
+              <span className="color-value">{chatConfig.color_burbuja}</span>
+            </div>
+          </div>
+
+          {/* Colores predefinidos */}
+          <div className="config-group">
+            <label>Colores sugeridos:</label>
+            <div className="color-presets">
+              {[
+                "#6C63FF", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", 
+                "#FFEAA7", "#DDA0DD", "#98D8C8", "#F7DC6F", "#BB8FCE"
+              ].map(color => (
+                <div
+                  key={color}
+                  className="color-preset"
+                  style={{ backgroundColor: color }}
+                  onClick={() => setChatConfig(prev => ({ ...prev, color_burbuja: color }))}
+                  title={color}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Sección: Opciones de visualización */}
+        <div className="config-section">
+          <h4>Opciones de visualización</h4>
+          
+          <div className="config-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                // Aquí puedes agregar más opciones de configuración
+                onChange={() => {}}
+              />
+              Mostrar hora en todos los mensajes
+            </label>
+          </div>
+
+          <div className="config-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                onChange={() => {}}
+              />
+              Notificaciones de mensajes nuevos
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div className="modal-actions">
+        <button 
+          className="btn-cancel"
+          onClick={() => {
+            setShowConfigModal(false);
+            setBackgroundPreview(null);
+            cargarConfiguracionChat(); // Recargar configuración original
+          }}
+        >
+          Cancelar
+        </button>
+        <button 
+          className="btn-save"
+          onClick={handleSaveConfig}
+        >
+          Guardar configuración
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       {/* Panel derecho de iconos - ELIMINADO para simplificar */}
     </div>

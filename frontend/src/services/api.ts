@@ -631,7 +631,15 @@ export const eliminarMensajeParaTodos = async (idMensaje: number): Promise<void>
   return response.data;
 };
 
-// frontend/services/api.ts - AGREGAR LA FUNCIÓN FALTANTE
+
+
+// Actualizar la interfaz ConfiguracionChat
+export interface ConfiguracionChat {
+  fondo_chat: string;
+  fondo_personalizado?: string;
+  color_burbuja: string;
+}
+
 
 // Configurar chat
 export async function configurarChat(idChat: number, configuracion: ConfiguracionChat): Promise<any> {
@@ -645,6 +653,28 @@ export async function configurarChat(idChat: number, configuracion: Configuracio
 export const obtenerConfiguracionChat = async (idChat: number): Promise<ConfiguracionChat> => {
   const res = await api.get(`/chats/${idChat}/configuracion`, { 
     headers: getAuthHeaders() 
+  });
+  return res.data;
+};
+
+// Subir fondo personalizado
+export const subirFondoPersonalizado = async (idChat: number, archivo: File): Promise<any> => {
+  const formData = new FormData();
+  formData.append('fondo', archivo);
+  
+  const res = await api.post(`/chats/${idChat}/fondo-personalizado`, formData, {
+    headers: {
+      ...getAuthHeaders(),
+      'Content-Type': 'multipart/form-data',
+    }
+  });
+  return res.data;
+};
+
+// Eliminar fondo personalizado
+export const eliminarFondoPersonalizado = async (idChat: number): Promise<any> => {
+  const res = await api.delete(`/chats/${idChat}/fondo-personalizado`, {
+    headers: getAuthHeaders()
   });
   return res.data;
 };
