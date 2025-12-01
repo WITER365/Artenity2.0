@@ -2476,6 +2476,7 @@ def eliminar_mensaje(
         raise HTTPException(status_code=500, detail=f"Error al eliminar mensaje: {str(e)}")
 
 # Eliminar chat completo
+# ------------------ ELIMINAR CHAT COMPLETO - VERSIÓN CORREGIDA ------------------
 @app.delete("/chats/{id_chat}")
 def eliminar_chat(
     id_chat: int,
@@ -2492,12 +2493,28 @@ def eliminar_chat(
         if not chat:
             raise HTTPException(status_code=404, detail="Chat no encontrado")
         
-        # Primero eliminar todos los mensajes del chat
+        # PRIMERO: Eliminar configuraciones del chat
+        db.query(models.ConfiguracionChat).filter(
+            models.ConfiguracionChat.id_chat == id_chat
+        ).delete()
+        
+        # SEGUNDO: Eliminar registros de mensajes eliminados relacionados con los mensajes de este chat
+        # Subquery para obtener IDs de mensajes del chat
+        mensajes_chat_subquery = db.query(models.Mensaje.id_mensaje).filter(
+            models.Mensaje.id_chat == id_chat
+        ).subquery()
+        
+        # Eliminar registros de MensajeEliminado relacionados
+        db.query(models.MensajeEliminado).filter(
+            models.MensajeEliminado.id_mensaje.in_(mensajes_chat_subquery)
+        ).delete()
+        
+        # TERCERO: Eliminar todos los mensajes del chat
         db.query(models.Mensaje).filter(
             models.Mensaje.id_chat == id_chat
         ).delete()
         
-        # Luego eliminar el chat
+        # FINALMENTE: Eliminar el chat
         db.delete(chat)
         db.commit()
         

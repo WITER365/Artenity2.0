@@ -276,7 +276,8 @@ class Chat(Base):
     
     usuario1 = relationship("Usuario", foreign_keys=[id_usuario1])
     usuario2 = relationship("Usuario", foreign_keys=[id_usuario2])
-    mensajes = relationship("Mensaje", back_populates="chat", cascade="all, delete-orphan")
+    mensajes = relationship("Mensaje", back_populates="chat", cascade="all, delete-orphan", passive_deletes=True)
+    configuraciones = relationship("ConfiguracionChat", back_populates="chat", cascade="all, delete-orphan", passive_deletes=True)
 
 class Mensaje(Base):
     __tablename__ = "mensajes"
@@ -315,15 +316,15 @@ class ConfiguracionChat(Base):
     __tablename__ = "configuraciones_chat"
     
     id = Column(Integer, primary_key=True, index=True)
-    id_chat = Column(Integer, ForeignKey("chats.id_chat"), nullable=False)
-    id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario"), nullable=False)
+    id_chat = Column(Integer, ForeignKey("chats.id_chat", ondelete="CASCADE"), nullable=False)
+    id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario", ondelete="CASCADE"), nullable=False)
     fondo_chat = Column(String(50), default="default")
     color_burbuja = Column(String(7), default="#6C63FF")  # Formato HEX
     fondo_personalizado = Column(String(500), nullable=True)
     fecha_actualizacion = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relaciones
-    chat = relationship("Chat")
+    chat = relationship("Chat", back_populates="configuraciones")
     usuario = relationship("Usuario")
     
     # Índice único para evitar configuraciones duplicadas
