@@ -208,7 +208,7 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
                 tipo_arte_preferido="",
                 telefono="",
                 nombre_usuario=username,
-                fecha_registro=datetime.utcnow()
+              
             )
             db.add(nuevo_usuario)
             db.commit()

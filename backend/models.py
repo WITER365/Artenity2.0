@@ -19,7 +19,7 @@ class Usuario(Base):
     tipo_arte_preferido = Column(String)
     telefono = Column(String)
     nombre_usuario = Column(String, unique=True)
-
+    
     # Relaciones
     perfil = relationship("Perfil", back_populates="usuario", uselist=False)
     publicaciones = relationship("Publicacion", back_populates="usuario", cascade="all, delete-orphan")
