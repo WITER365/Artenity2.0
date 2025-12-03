@@ -1543,3 +1543,177 @@ nav ul {
   display: flex;
   align-items: center;
 }
+
+/*tres puntos*/
+/* Estilos para el menú de opciones de los posts (los tres puntos) */
+.post-menu-container {
+  position: relative;
+  margin-left: auto;
+  margin-right: 10px; /* Añadido para separación */
+}
+
+.menu-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+  color: #71767b; /* Color gris para los tres puntos */
+}
+
+.menu-btn:hover {
+  background-color: rgba(29, 155, 240, 0.1);
+  color: #1d9bf0; /* Color azul al hacer hover */
+}
+
+.post-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  min-width: 200px; /* Aumentado para mejor visualización */
+  overflow: hidden;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.menu-item {
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 14px;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.menu-item:hover {
+  background-color: #f5f5f5;
+}
+
+.menu-item.delete {
+  color: #e74c3c;
+}
+
+.menu-item.delete:hover {
+  background-color: #ffeaea;
+}
+
+.menu-item.block {
+  color: #e67e22;
+}
+
+.menu-item.block:hover {
+  background-color: #fff3e0;
+}
+
+.menu-item.not-interested {
+  color: #7f8c8d;
+}
+
+.menu-item.not-interested:hover {
+  background-color: #f8f9fa;
+}
+
+
+
+
+
+.timestamp {
+  color: #ffffff;
+  font-size: 14px;
+  opacity: 0.8;
+  margin-left: 8px;
+}
+
+/* Animación para el menú */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Estilos para el icono de tres puntos */
+.menu-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Ajustes responsivos */
+@media (max-width: 768px) {
+  .post-menu {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    border-radius: 12px 12px 0 0;
+    animation: slideUp 0.3s ease-out;
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+}
+
+/* Estilos para los tres puntos dentro del post-card */
+.post-card .post-menu-container {
+  margin-left: auto;
+  z-index: 10;
+}
+
+/* Asegurar que el post-card tenga posición relativa */
+.post-card {
+  position: relative;
+  background: rgba(14, 28, 81, 0.81);
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+  margin-bottom: 16px;
+}
+
+/* Asegurar que el menú se muestre sobre otros elementos */
+.post-menu {
+  z-index: 1000 !important;
+}
+
+/* Estilo específico para el botón de tres puntos en modo oscuro */
+.menu-btn.dark-mode {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.menu-btn.dark-mode:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Estilo para cuando el menú está abierto */
+.menu-btn.active {
+  background-color: rgba(29, 155, 240, 0.2);
+  color: #1d9bf0;
+}
