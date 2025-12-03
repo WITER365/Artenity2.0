@@ -63,6 +63,7 @@ interface Publicacion {
     };
   };
   imagen?: string;
+  etiquetas?: string[] | string; // Actualizado para aceptar array o string
 }
 
 interface EstadisticasPublicacion {
@@ -517,17 +518,36 @@ export default function PaginaPrincipal() {
           })
           .filter((url): url is string => url !== null && url.trim() !== '');
 
-        return {
-          ...p,
-          medios: mediosArray,
-          usuario: {
-            ...p.usuario,
-            perfil: {
-              ...p.usuario?.perfil,
-              foto_perfil: fotoPerfil,
-            },
-          },
-        };
+      // Dentro de cargarPublicaciones, en el map de posts:
+return {
+  ...p,
+  medios: mediosArray,
+  etiquetas: p.etiquetas ? 
+    (() => {
+      try {
+        if (typeof p.etiquetas === 'string') {
+          // Si empieza con [ y termina con ], es JSON
+          if (p.etiquetas.trim().startsWith('[') && p.etiquetas.trim().endsWith(']')) {
+            return JSON.parse(p.etiquetas);
+          }
+          // Si no, devolver como array con un solo elemento
+          return [p.etiquetas];
+        }
+        return Array.isArray(p.etiquetas) ? p.etiquetas : [];
+      } catch (error) {
+        console.error("Error parsing etiquetas:", error);
+        return [];
+      }
+    })() 
+    : [],
+  usuario: {
+    ...p.usuario,
+    perfil: {
+      ...p.usuario?.perfil,
+      foto_perfil: fotoPerfil,
+    },
+  },
+};
       });
 
       setPublicaciones(postsProcesados);
@@ -904,7 +924,7 @@ export default function PaginaPrincipal() {
       
       {/* Barra superior */}
       <div className="topbar">
-        {/* 🔥 BÚSQUEDA DE USUARIOS */}
+        {/*  BÚSQUEDA DE USUARIOS */}
         <div className="search-container"
           style={{
             position: 'relative',
@@ -1069,12 +1089,13 @@ export default function PaginaPrincipal() {
 
         {/* Crear nuevo post */}
         <div className="post-input">
-          <input
-            type="text"
-            placeholder="¿QUÉ QUIERES ESCRIBIR?"
-            value={contenido}
-            onChange={(e) => setContenido(e.target.value)}
-          />
+       <textarea
+        placeholder="¿QUÉ QUIERES ESCRIBIR?"
+        value={contenido}
+        onChange={(e) => setContenido(e.target.value)}
+        rows={3}
+        className="post-textarea"
+        />
           
           {/* Selector de etiquetas */}
           <div className="etiquetas-container">
@@ -1229,45 +1250,69 @@ export default function PaginaPrincipal() {
                   )}
                 </div>
               </div>
-
-              {/* Contenido del post*/}
-              <div className="post-content">
-                <p>{post.contenido}</p>
-                
-                {/* Renderizado de medios */}
-                {post.medios && post.medios.length > 0 && (
-                  <div className={`post-media ${post.medios.length > 1 ? 'multiple-media' : 'single-media'}`}>
-                    {post.medios.map((medio: string, index: number) => (
-                      <div key={index} className="media-item">
-                        {esVideo(medio) ? (
-                          <div className="video-container">
-                            <video 
-                              controls 
-                              className="post-video"
-                              preload="metadata"
-                            >
-                              <source src={medio} type="video/mp4" />
-                              <source src={medio} type="video/webm" />
-                              Tu navegador no soporta el elemento video.
-                            </video>
-                          </div>
-                        ) : (
-                          <img 
-                            src={medio} 
-                            alt={`Post media ${index + 1}`} 
-                            className="post-image"
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                {/* Compatibilidad con imagen única - SOLO si no hay medios */}
-                {(!post.medios || post.medios.length === 0) && post.imagen && (
-                  <img src={post.imagen} alt="post" className="post-image" />
-                )}
-              </div>
+              {/* Mostrar etiquetas si existen */}
+{post.etiquetas && (
+  <div className="etiquetas-post">
+    {(() => {
+      try {
+        const etiquetasArray = typeof post.etiquetas === 'string' 
+          ? JSON.parse(post.etiquetas) 
+          : post.etiquetas;
+        
+        if (Array.isArray(etiquetasArray)) {
+          return etiquetasArray.map((tag: string, index: number) => (
+            <span key={index} className="etiqueta-post">
+              #{tag}
+            </span>
+          ));
+        }
+        return null;
+      } catch (error) {
+        console.error("Error parsing etiquetas:", error);
+        return null;
+      }
+    })()}
+  </div>
+)}
+             {/* Contenido del post */}
+             
+<div className="post-content">
+  
+  <p>{post.contenido}</p> 
+  {/* Renderizado de medios */}
+  {post.medios && post.medios.length > 0 && (
+    <div className={`post-media ${post.medios.length > 1 ? 'multiple-media' : 'single-media'}`}>
+      {post.medios.map((medio: string, index: number) => (
+        <div key={index} className="media-item">
+          {esVideo(medio) ? (
+            <div className="video-container">
+              <video 
+                controls 
+                className="post-video"
+                preload="metadata"
+              >
+                <source src={medio} type="video/mp4" />
+                <source src={medio} type="video/webm" />
+                Tu navegador no soporta el elemento video.
+              </video>
+            </div>
+          ) : (
+            <img 
+              src={medio} 
+              alt={`Post media ${index + 1}`} 
+              className="post-image"
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  )}
+  
+  {/* Compatibilidad con imagen única - SOLO si no hay medios */}
+  {(!post.medios || post.medios.length === 0) && post.imagen && (
+    <img src={post.imagen} alt="post" className="post-image" />
+  )}
+</div>
 
               {/* Acciones */}
               <div className="post-actions-x">

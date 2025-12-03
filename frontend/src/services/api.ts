@@ -423,7 +423,7 @@ export const getSolicitudesAmistad = obtenerSolicitudesPendientes;
 export const getAmigos = obtenerAmigos;
 export const getCategorias = obtenerCategorias;
 
-// src/services/api.ts - AGREGAR ESTAS FUNCIONES
+
 
 // ================== COMPARTIR PUBLICACIONES ==================
 

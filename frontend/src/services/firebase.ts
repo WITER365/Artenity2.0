@@ -8,7 +8,7 @@ import {
 } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "",
+  apiKey: "AIzaSyA51K3DkEB79DWfHwJ_lHgYB7juK0_kj0w",
   authDomain: "artenity-5127c.firebaseapp.com",
   projectId: "artenity-5127c",
   storageBucket: "artenity-5127c.firebasestorage.app",

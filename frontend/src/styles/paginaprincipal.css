@@ -1884,3 +1884,87 @@ nav ul {
   }
 }
 
+.post-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  max-height: 200px;
+  margin-bottom: 12px;
+  background-color: #f9f9f9;
+}
+
+.post-textarea:focus {
+  outline: none;
+  border-color: #6c63ff;
+  background-color: #fff;
+}
+
+/* Estilos para etiquetas en los posts */
+.etiquetas-post {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+  margin-bottom: 8px;
+}
+
+.etiqueta-post {
+  background-color: #e0e7ff;
+  color: #4f46e5;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid #c7d2fe;
+}
+
+.etiqueta-post:hover {
+  background-color: #c7d2fe;
+}
+
+
+/* Contenedor principal de post */
+.post-card {
+  overflow: visible !important; /* Cambia de hidden a visible si es necesario */
+}
+
+/* Contenedor del contenido del post */
+.post-content {
+  width: 100%;
+  max-width: 100%;
+  word-wrap: break-word; 
+  overflow-wrap: break-word; 
+  word-break: break-word; 
+  white-space: pre-wrap; 
+  font-size: 16px;
+  line-height: 1.5;
+  margin-bottom: 12px;
+  padding: 0 4px;
+}
+
+/* Para texto extremadamente largo */
+.post-content .long-text {
+  max-height: none; 
+  overflow: visible;
+  display: block;
+}
+
+/* Estilos para una sola imagen */
+.single-media .media-item {
+  width: auto;
+}
+.single-media .post-image {
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+  background: #000;
+}
+
+
+
+
