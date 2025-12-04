@@ -1,5 +1,6 @@
+// frontend/components/artenity.tsx
 import React from "react";
-import { useNavigate } from "react-router-dom"; // Importa useNavigate
+import { useNavigate } from "react-router-dom";
 import "../styles/artenity.css";
 import { Link } from "react-router-dom";
 import artenityimg from "../assets/img/artenity.png";
@@ -10,10 +11,11 @@ import danzaImg from "../assets/img/danza.png";
 import cineImg from "../assets/img/cine.png";
 
 const Artenity: React.FC = () => {
-  const navigate = useNavigate(); // Hook para navegación
+  const navigate = useNavigate();
 
   // Función para manejar clics en iconos
   const handleIconClick = (categoryName: string) => {
+    // Navegar directamente a búsqueda con la categoría (sin token requerido)
     navigate(`/busqueda?categoria=${encodeURIComponent(categoryName)}`);
   };
 

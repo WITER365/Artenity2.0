@@ -1,5 +1,7 @@
 import os
 import shutil
+import secrets
+import string
 from datetime import datetime, timedelta
 from typing import List
 from uuid import uuid4
@@ -62,8 +64,8 @@ if settings.MAIL_USERNAME and settings.MAIL_PASSWORD and settings.MAIL_FROM:
 # ------------------ DIRECTORIOS ------------------
 os.makedirs("static/perfiles", exist_ok=True)
 os.makedirs("static/posts", exist_ok=True)
-os.makedirs("static/chat_files/images", exist_ok=True)  # Nuevo directorio para imágenes de chat
-os.makedirs("static/chat_files/videos", exist_ok=True)  # Nuevo directorio para videos de chat
+os.makedirs("static/chat_files/images", exist_ok=True)  
+os.makedirs("static/chat_files/videos", exist_ok=True)  
 os.makedirs("static/chat_fondos", exist_ok=True)
 
 # ------------------ STATIC FILES ------------------
@@ -3165,6 +3167,175 @@ def obtener_categorias_populares(
             status_code=500, 
             detail=f"Error interno del servidor: {str(e)}"
         )
+# Agrega en tu main.py, después de los otros endpoints pero antes de if __name__ == "__main__"
+
+# ================== ENDPOINTS PÚBLICOS SIN AUTENTICACIÓN ==================
+
+@app.get("/public/categorias")
+def obtener_categorias_publicas(db: Session = Depends(get_db)):
+    """Obtener todas las categorías disponibles (PÚBLICO)"""
+    categorias = db.query(models.Categoria).order_by(models.Categoria.nombre).all()
+    return categorias
+
+@app.get("/public/categoria/{categoria_nombre}")
+def obtener_publicaciones_categoria_publica(
+    categoria_nombre: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Obtener publicaciones por categoría SIN autenticación
+    Solo muestra publicaciones públicas
+    """
+    try:
+        # Normalizar nombre de categoría
+        categoria_normalizada = categoria_nombre.lower().strip()
+        
+        # Obtener TODAS las publicaciones
+        todas_publicaciones = (
+            db.query(models.Publicacion)
+            .options(joinedload(models.Publicacion.usuario).joinedload(models.Usuario.perfil))
+            .order_by(models.Publicacion.fecha_creacion.desc())
+            .limit(100)  # Limitar para no sobrecargar
+            .all()
+        )
+        
+        # Filtrar por etiqueta/categoría
+        publicaciones_filtradas = []
+        for pub in todas_publicaciones:
+            if pub.etiquetas:
+                try:
+                    # Parsear etiquetas JSON
+                    etiquetas_lista = json.loads(pub.etiquetas) if isinstance(pub.etiquetas, str) else pub.etiquetas
+                    
+                    if etiquetas_lista:
+                        # Normalizar etiquetas para comparación
+                        etiquetas_normalizadas = [str(tag).lower().strip() for tag in etiquetas_lista]
+                        
+                        # Buscar coincidencia
+                        if (categoria_normalizada in etiquetas_normalizadas or
+                            any(categoria_normalizada in tag for tag in etiquetas_normalizadas)):
+                            publicaciones_filtradas.append(pub)
+                except Exception as e:
+                    # Si hay error al parsear, verificar si el string contiene la categoría
+                    if (pub.etiquetas and 
+                        isinstance(pub.etiquetas, str) and 
+                        categoria_normalizada in pub.etiquetas.lower()):
+                        publicaciones_filtradas.append(pub)
+        
+        print(f"📊 Encontradas {len(publicaciones_filtradas)} publicaciones públicas para categoría '{categoria_nombre}'")
+        
+        return {
+            "categoria": categoria_nombre,
+            "publicaciones": publicaciones_filtradas,
+            "total": len(publicaciones_filtradas)
+        }
+        
+    except Exception as e:
+        print(f"❌ Error obteniendo publicaciones por categoría (público): {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error interno del servidor: {str(e)}"
+        )
+
+@app.get("/public/buscar")
+def buscar_publico(
+    query: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Búsqueda pública SIN autenticación
+    Solo busca usuarios y publicaciones públicas
+    """
+    if not query or len(query.strip()) < 2:
+        raise HTTPException(status_code=400, detail="La búsqueda debe tener al menos 2 caracteres")
+    
+    search_term = f"%{query.strip()}%"
+    
+    # Buscar usuarios (limitado para no exponer información sensible)
+    usuarios = (
+        db.query(models.Usuario)
+        .options(joinedload(models.Usuario.perfil))
+        .filter(
+            (models.Usuario.nombre.ilike(search_term)) |
+            (models.Usuario.nombre_usuario.ilike(search_term))
+        )
+        .limit(15)
+        .all()
+    )
+    
+    # Buscar publicaciones por contenido o etiquetas
+    publicaciones = (
+        db.query(models.Publicacion)
+        .options(joinedload(models.Publicacion.usuario).joinedload(models.Usuario.perfil))
+        .filter(
+            models.Publicacion.contenido.ilike(search_term)
+        )
+        .limit(20)
+        .all()
+    )
+    
+    # También buscar por etiquetas
+    publicaciones_etiquetas = (
+        db.query(models.Publicacion)
+        .options(joinedload(models.Publicacion.usuario).joinedload(models.Usuario.perfil))
+        .filter(
+            models.Publicacion.etiquetas.ilike(search_term)
+        )
+        .limit(20)
+        .all()
+    )
+    
+    # Combinar y eliminar duplicados
+    todas_publicaciones = publicaciones + publicaciones_etiquetas
+    publicaciones_unicas = []
+    ids_vistos = set()
+    
+    for pub in todas_publicaciones:
+        if pub.id_publicacion not in ids_vistos:
+            ids_vistos.add(pub.id_publicacion)
+            publicaciones_unicas.append(pub)
+    
+    # Formatear respuesta
+    resultado_usuarios = []
+    for usuario in usuarios:
+        resultado_usuarios.append({
+            "id_usuario": usuario.id_usuario,
+            "nombre_usuario": usuario.nombre_usuario,
+            "nombre": usuario.nombre,
+            "foto_perfil": usuario.perfil.foto_perfil if usuario.perfil else None
+        })
+    
+    return {
+        "usuarios": resultado_usuarios,
+        "publicaciones": publicaciones_unicas[:30],  # Limitar a 30
+        "query": query,
+        "total_usuarios": len(resultado_usuarios),
+        "total_publicaciones": len(publicaciones_unicas)
+    }
+
+@app.get("/public/usuarios/{id_usuario}/basico")
+def obtener_usuario_basico(id_usuario: int, db: Session = Depends(get_db)):
+    """Obtener información básica de un usuario (PÚBLICO)"""
+    usuario = (
+        db.query(models.Usuario)
+        .options(joinedload(models.Usuario.perfil))
+        .filter(models.Usuario.id_usuario == id_usuario)
+        .first()
+    )
+    
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    
+    return {
+        "id_usuario": usuario.id_usuario,
+        "nombre_usuario": usuario.nombre_usuario,
+        "nombre": usuario.nombre,
+        "apellido": usuario.apellido,
+        "perfil": {
+            "foto_perfil": usuario.perfil.foto_perfil if usuario.perfil else None,
+            "descripcion": usuario.perfil.descripcion if usuario.perfil else None
+        } if usuario.perfil else None
+    }
 # ------------------ HOME ------------------
 @app.get("/home")
 def home():

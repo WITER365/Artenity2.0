@@ -727,3 +727,79 @@ export async function obtenerCategoriasPopulares(): Promise<any[]> {
     return []; // Devolver array vacío en caso de error
   }
 }
+
+// En frontend/services/api.ts, agrega:
+
+// ================== SERVICIOS PÚBLICOS (SIN LOGIN) ==================
+
+export async function obtenerCategoriasPublicas(): Promise<any[]> {
+  try {
+    const res = await api.get("/public/categorias");
+    return res.data;
+  } catch (error) {
+    console.error("Error obteniendo categorías públicas:", error);
+    return [];
+  }
+}
+
+export async function buscarPublico(query: string): Promise<any> {
+  try {
+    const res = await api.get(`/public/buscar?query=${encodeURIComponent(query)}`);
+    return res.data;
+  } catch (error) {
+    console.error("Error en búsqueda pública:", error);
+    throw error;
+  }
+}
+
+export async function obtenerPublicacionesCategoriaPublica(categoriaNombre: string): Promise<any> {
+  try {
+    const res = await api.get(`/public/categoria/${encodeURIComponent(categoriaNombre)}`);
+    return res.data;
+  } catch (error) {
+    console.error("Error obteniendo categoría pública:", error);
+    throw error;
+  }
+}
+
+export async function obtenerUsuarioBasico(idUsuario: number): Promise<any> {
+  try {
+    const res = await api.get(`/public/usuarios/${idUsuario}/basico`);
+    return res.data;
+  } catch (error) {
+    console.error("Error obteniendo usuario básico:", error);
+    throw error;
+  }
+}
+
+// ================== FUNCIONES INTELIGENTES QUE USAN PÚBLICAS O PRIVADAS ==================
+
+export async function buscarContenido(query: string): Promise<any> {
+  const token = localStorage.getItem("token");
+  
+  if (!token) {
+    // Usar búsqueda pública si no hay token
+    return await buscarPublico(query);
+  } else {
+    // Usar búsqueda privada si hay token
+    const res = await api.get(`/buscar?query=${encodeURIComponent(query)}`, {
+      headers: getAuthHeaders(),
+    });
+    return res.data;
+  }
+}
+
+export async function obtenerContenidoCategoria(categoriaNombre: string): Promise<any> {
+  const token = localStorage.getItem("token");
+  
+  if (!token) {
+    // Usar categoría pública si no hay token
+    return await obtenerPublicacionesCategoriaPublica(categoriaNombre);
+  } else {
+    // Usar categoría privada si hay token
+    const res = await api.get(`/publicaciones/categoria/${encodeURIComponent(categoriaNombre)}`, {
+      headers: getAuthHeaders(),
+    });
+    return res.data;
+  }
+}
