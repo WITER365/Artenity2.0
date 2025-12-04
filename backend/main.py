@@ -3519,7 +3519,219 @@ def obtener_sugerencias_usuarios(
             status_code=500, 
             detail=f"Error al obtener sugerencias: {str(e)}"
         )
+# ================== CONFIGURACIÓN USUARIO ==================
 
+@app.put("/usuarios/{id_usuario}")
+def actualizar_usuario(
+    id_usuario: int,
+    nombre: str = Form(None),
+    apellido: str = Form(None),
+    correo_electronico: str = Form(None),
+    fecha_nacimiento: str = Form(None),
+    genero: str = Form(None),
+    tipo_arte_preferido: str = Form(None),
+    telefono: str = Form(None),
+    nombre_usuario: str = Form(None),
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Actualizar información del usuario"""
+    try:
+        if id_usuario != user_id:
+            raise HTTPException(status_code=403, detail="No puedes actualizar otros usuarios")
+        
+        usuario = db.query(models.Usuario).filter(models.Usuario.id_usuario == id_usuario).first()
+        if not usuario:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        # Actualizar campos si se proporcionan
+        if nombre:
+            usuario.nombre = nombre
+        if apellido:
+            usuario.apellido = apellido
+        if correo_electronico:
+            # Verificar que el correo no esté en uso por otro usuario
+            existing_user = db.query(models.Usuario).filter(
+                models.Usuario.correo_electronico == correo_electronico,
+                models.Usuario.id_usuario != id_usuario
+            ).first()
+            if existing_user:
+                raise HTTPException(status_code=400, detail="El correo electrónico ya está en uso")
+            usuario.correo_electronico = correo_electronico
+        if fecha_nacimiento:
+            usuario.fecha_nacimiento = datetime.strptime(fecha_nacimiento, "%Y-%m-%d").date()
+        if genero:
+            usuario.genero = genero
+        if tipo_arte_preferido:
+            usuario.tipo_arte_preferido = tipo_arte_preferido
+        if telefono:
+            usuario.telefono = telefono
+        if nombre_usuario:
+            # Verificar que el nombre de usuario no esté en uso
+            existing_user = db.query(models.Usuario).filter(
+                models.Usuario.nombre_usuario == nombre_usuario,
+                models.Usuario.id_usuario != id_usuario
+            ).first()
+            if existing_user:
+                raise HTTPException(status_code=400, detail="El nombre de usuario ya está en uso")
+            usuario.nombre_usuario = nombre_usuario
+        
+        db.commit()
+        db.refresh(usuario)
+        
+        return {
+            "mensaje": "Usuario actualizado correctamente",
+            "usuario": {
+                "id_usuario": usuario.id_usuario,
+                "nombre": usuario.nombre,
+                "apellido": usuario.apellido,
+                "correo_electronico": usuario.correo_electronico,
+                "fecha_nacimiento": usuario.fecha_nacimiento,
+                "genero": usuario.genero,
+                "tipo_arte_preferido": usuario.tipo_arte_preferido,
+                "telefono": usuario.telefono,
+                "nombre_usuario": usuario.nombre_usuario
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Formato de fecha inválido. Use YYYY-MM-DD")
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al actualizar usuario: {str(e)}")
+
+@app.put("/usuarios/{id_usuario}/cambiar-contrasena")
+def cambiar_contrasena(
+    id_usuario: int,
+    password_actual: str = Form(...),
+    nueva_contrasena: str = Form(...),
+    confirmar_contrasena: str = Form(...),
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Cambiar contraseña del usuario"""
+    try:
+        if id_usuario != user_id:
+            raise HTTPException(status_code=403, detail="No puedes cambiar la contraseña de otros usuarios")
+        
+        # Verificar que las contraseñas coincidan
+        if nueva_contrasena != confirmar_contrasena:
+            raise HTTPException(status_code=400, detail="Las contraseñas no coinciden")
+        
+        if len(nueva_contrasena) < 6:
+            raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 6 caracteres")
+        
+        usuario = db.query(models.Usuario).filter(models.Usuario.id_usuario == id_usuario).first()
+        if not usuario:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        # Verificar contraseña actual
+        if usuario.contrasena != password_actual:
+            raise HTTPException(status_code=400, detail="Contraseña actual incorrecta")
+        
+        # Actualizar contraseña
+        usuario.contrasena = nueva_contrasena
+        db.commit()
+        
+        return {"mensaje": "Contraseña cambiada correctamente"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al cambiar contraseña: {str(e)}")
+
+@app.delete("/usuarios/{id_usuario}/eliminar-cuenta")
+def eliminar_cuenta(
+    id_usuario: int,
+    confirmacion: str = Form(...),
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Eliminar cuenta de usuario permanentemente"""
+    try:
+        if id_usuario != user_id:
+            raise HTTPException(status_code=403, detail="No puedes eliminar otras cuentas")
+        
+        if confirmacion != "ELIMINAR":
+            raise HTTPException(status_code=400, detail="Debes escribir 'ELIMINAR' para confirmar")
+        
+        usuario = db.query(models.Usuario).filter(models.Usuario.id_usuario == id_usuario).first()
+        if not usuario:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        # Eliminar usuario (esto eliminará en cascada todos los registros relacionados)
+        db.delete(usuario)
+        db.commit()
+        
+        return {"mensaje": "Cuenta eliminada permanentemente"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al eliminar cuenta: {str(e)}")
+
+# ================== REPORTAR PROBLEMAS ==================
+
+class ReporteProblema(BaseModel):
+    tipo_problema: str
+    descripcion: str
+    email_contacto: str
+
+@app.post("/reportar-problema")
+def reportar_problema(
+    reporte: ReporteProblema,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Reportar un problema o solicitar soporte"""
+    try:
+        # Aquí podrías guardar el reporte en la base de datos
+        # Por ahora solo retornamos un mensaje de confirmación
+        
+        # Ejemplo de guardado en la base de datos:
+        """
+        nuevo_reporte = models.ReporteProblema(
+            id_usuario=user_id,
+            tipo_problema=reporte.tipo_problema,
+            descripcion=reporte.descripcion,
+            email_contacto=reporte.email_contacto,
+            fecha_reporte=datetime.utcnow()
+        )
+        db.add(nuevo_reporte)
+        db.commit()
+        """
+        
+        # También podrías enviar un correo de notificación al equipo de soporte
+        if conf:
+            mensaje = MessageSchema(
+                subject=f"Reporte de Problema - {reporte.tipo_problema}",
+                recipients=["soporte@artiverse.com"],  # Cambiar por tu email de soporte
+                body=f"""
+                <h3>Nuevo Reporte de Problema</h3>
+                <p><strong>Tipo:</strong> {reporte.tipo_problema}</p>
+                <p><strong>Usuario ID:</strong> {user_id}</p>
+                <p><strong>Email de contacto:</strong> {reporte.email_contacto}</p>
+                <p><strong>Descripción:</strong></p>
+                <p>{reporte.descripcion}</p>
+                """,
+                subtype="html"
+            )
+            
+            fm = FastMail(conf)
+            # await fm.send_message(mensaje)  # Descomentar para enviar realmente
+        
+        return {"mensaje": "Reporte enviado correctamente. Te contactaremos pronto."}
+        
+    except Exception as e:
+        print(f"Error al procesar reporte: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error al enviar reporte: {str(e)}"
+        )
 # ------------------ HOME ------------------
 @app.get("/home")
 def home():

@@ -273,3 +273,43 @@ class CategoriaResponse(CategoriaBase):
 
     class Config:
         from_attributes = True
+# Agrega estos esquemas al final del archivo
+
+# ------------------ ACTUALIZAR USUARIO ------------------
+class UsuarioUpdate(BaseModel):
+    nombre: Optional[str] = None
+    apellido: Optional[str] = None
+    correo_electronico: Optional[EmailStr] = None
+    fecha_nacimiento: Optional[date] = None
+    genero: Optional[str] = None
+    tipo_arte_preferido: Optional[str] = None
+    telefono: Optional[str] = None
+    nombre_usuario: Optional[str] = None
+
+# ------------------ CAMBIAR CONTRASEÑA ------------------
+class CambiarContrasenaRequest(BaseModel):
+    password_actual: str
+    nueva_contrasena: str
+    confirmar_contrasena: str
+
+# ------------------ ELIMINAR CUENTA ------------------
+class EliminarCuentaRequest(BaseModel):
+    confirmacion: str
+
+# ------------------ REPORTE PROBLEMA ------------------
+class ReporteProblemaBase(BaseModel):
+    tipo_problema: str
+    descripcion: str
+    email_contacto: EmailStr
+
+class ReporteProblemaCreate(ReporteProblemaBase):
+    pass
+
+class ReporteProblemaResponse(ReporteProblemaBase):
+    id_reporte: int
+    id_usuario: int
+    fecha_reporte: datetime
+    estado: str
+
+    class Config:
+        from_attributes = True

@@ -838,3 +838,103 @@ export async function obtenerSugerenciasUsuarios(): Promise<SugerenciasResponse>
     throw error;
   }
 }
+// ================== CONFIGURACIÓN USUARIO ==================
+
+export interface ActualizarUsuarioData {
+  nombre?: string;
+  apellido?: string;
+  correo_electronico?: string;
+  fecha_nacimiento?: string;
+  genero?: string;
+  tipo_arte_preferido?: string;
+  telefono?: string;
+  nombre_usuario?: string;
+}
+
+export async function actualizarUsuario(id_usuario: number, data: ActualizarUsuarioData): Promise<any> {
+  const formData = new FormData();
+  
+  // Agregar solo los campos que tienen valor
+  if (data.nombre) formData.append("nombre", data.nombre);
+  if (data.apellido) formData.append("apellido", data.apellido);
+  if (data.correo_electronico) formData.append("correo_electronico", data.correo_electronico);
+  if (data.fecha_nacimiento) formData.append("fecha_nacimiento", data.fecha_nacimiento);
+  if (data.genero) formData.append("genero", data.genero);
+  if (data.tipo_arte_preferido) formData.append("tipo_arte_preferido", data.tipo_arte_preferido);
+  if (data.telefono) formData.append("telefono", data.telefono);
+  if (data.nombre_usuario) formData.append("nombre_usuario", data.nombre_usuario);
+  
+  const res = await api.put(`/usuarios/${id_usuario}`, formData, {
+    headers: {
+      ...getAuthHeaders(),
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return res.data;
+}
+
+export interface CambiarContrasenaData {
+  passwordActual: string;
+  nuevaContrasena: string;
+  confirmarContrasena: string;
+}
+
+
+
+// ================== REPORTAR PROBLEMAS ==================
+
+export interface ReporteProblemaData {
+  tipo_problema: string;
+  descripcion: string;
+  email_contacto: string;
+}
+
+export async function reportarProblema(data: ReporteProblemaData): Promise<any> {
+  const res = await api.post("/reportar-problema", data, {
+    headers: getAuthHeaders(),
+  });
+  return res.data;
+}
+// En services/api.ts, actualiza estas funciones para manejar mejor los errores:
+
+export async function cambiarContrasena(id_usuario: number, data: CambiarContrasenaData): Promise<any> {
+  try {
+    const formData = new FormData();
+    formData.append("password_actual", data.passwordActual);
+    formData.append("nueva_contrasena", data.nuevaContrasena);
+    formData.append("confirmar_contrasena", data.confirmarContrasena);
+    
+    const res = await api.put(`/usuarios/${id_usuario}/cambiar-contrasena`, formData, {
+      headers: {
+        ...getAuthHeaders(),
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return res.data;
+  } catch (error: any) {
+    console.error("Error cambiando contraseña:", error);
+    // Retorna un objeto con mensaje para que el frontend pueda manejarlo
+    return {
+      mensaje: error.response?.data?.detail || "Error al cambiar contraseña"
+    };
+  }
+}
+
+export async function eliminarCuenta(id_usuario: number, confirmacion: string): Promise<any> {
+  try {
+    const formData = new FormData();
+    formData.append("confirmacion", confirmacion);
+    
+    const res = await api.delete(`/usuarios/${id_usuario}/eliminar-cuenta`, {
+      headers: {
+        ...getAuthHeaders(),
+        "Content-Type": "multipart/form-data",
+      },
+      data: formData,
+    });
+    return res.data;
+  } catch (error: any) {
+    console.error("Error eliminando cuenta:", error);
+    throw error; // Propaga el error para que el frontend lo maneje
+  }
+}

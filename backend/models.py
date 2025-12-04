@@ -349,3 +349,20 @@ class Categoria(Base):
     id_categoria = Column(Integer, primary_key=True, index=True)
     nombre = Column(String(100), unique=True, index=True, nullable=False)
     descripcion = Column(String(255), nullable=True)
+
+# Agrega este modelo al final del archivo
+
+# ------------------ REPORTE DE PROBLEMAS ------------------
+class ReporteProblema(Base):
+    __tablename__ = "reportes_problemas"
+
+    id_reporte = Column(Integer, primary_key=True, index=True)
+    id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario", ondelete="CASCADE"))
+    tipo_problema = Column(String(100), nullable=False)  # tecnico, contenido, usuario, funcionalidad, otro
+    descripcion = Column(Text, nullable=False)
+    email_contacto = Column(String(255), nullable=False)
+    fecha_reporte = Column(DateTime, default=datetime.utcnow)
+    estado = Column(String(50), default="pendiente")  # pendiente, en_proceso, resuelto
+    
+    # Relaciones
+    usuario = relationship("Usuario")

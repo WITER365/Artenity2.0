@@ -14,7 +14,7 @@ import ForgotPassword from "./components/ForgotPassword";
 import ResetPassword from "./components/ResetPassword";
 import CompartidosPage from "./components/CompartidosPage";
 import CategoriasPage from "./components/CategoriasPage";
-
+import Configuraciones from "./components/configuraciones";
 function App() {
   const { token } = useAuth();
 
@@ -39,7 +39,8 @@ function App() {
       <Route path="/mensajes" element={token ? <Messages /> : <Navigate to="/login" />} />
       <Route path="/categorias" element={token ? <CategoriasPage /> : <Navigate to="/login" />} />
       <Route path="/compartidos" element={token ? <CompartidosPage /> : <Navigate to="/login" />} />
-
+      
+<Route path="/configuraciones" element={token ? <Configuraciones /> : <Navigate to="/login" />} />
       {/* Ruta fallback */}
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>

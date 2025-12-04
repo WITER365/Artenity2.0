@@ -1135,7 +1135,7 @@ export default function PaginaPrincipal() {
               <li><button className="nav-btn" onClick={() => navigate("/principal")}><Home /> Home</button></li>
               <li><button className="nav-btn" onClick={() => navigate("/categorias")}><Grid /> Categorías</button></li>
               <li><button className="nav-btn" onClick={() => navigate("/mensajes")}><MessageSquare /> Mensajes</button></li>
-              <li><button className="nav-btn"><Settings /> Configuración</button></li>
+              <li><button className="nav-btn" onClick={() => navigate("/configuraciones")}><Settings /> Configuración</button></li>
               <li><button className="nav-btn"><Image /> Galería de Arte</button></li>
             </ul>
           </nav>
