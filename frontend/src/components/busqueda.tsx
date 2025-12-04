@@ -1,4 +1,4 @@
-// frontend/components/busqueda.tsx (versión simplificada)
+// frontend/components/busqueda.tsx (versión completa)
 import React, { useEffect, useState } from "react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import { 
@@ -15,6 +15,7 @@ const Busqueda: React.FC = () => {
   const [publicaciones, setPublicaciones] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [buscando, setBuscando] = useState(false);
+  const [mostrarUsuarios, setMostrarUsuarios] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
@@ -56,24 +57,38 @@ const Busqueda: React.FC = () => {
     if (!query.trim()) {
       setUsuarios([]);
       setPublicaciones([]);
+      setMostrarUsuarios(false);
       return;
     }
 
     setBuscando(true);
+    setMostrarUsuarios(true); // Mostrar sección de usuarios
 
     try {
       const resultado = await buscarContenido(query);
-      setUsuarios(resultado.usuarios || []);
-      setPublicaciones(resultado.publicaciones || []);
+      
+      // Manejar diferentes formatos de respuesta
+      if (resultado.usuarios !== undefined) {
+        setUsuarios(resultado.usuarios || []);
+      } else if (Array.isArray(resultado)) {
+        // Si la respuesta es un array, asumir que son usuarios
+        setUsuarios(resultado);
+      }
+      
+      if (resultado.publicaciones !== undefined) {
+        setPublicaciones(resultado.publicaciones || []);
+      }
+      
     } catch (error) {
       console.error("Error en búsqueda:", error);
+      setUsuarios([]);
+      setPublicaciones([]);
     } finally {
       setBuscando(false);
     }
   };
 
   const procesarMediosPublicacion = (publicacion: any) => {
-    // Tu función existente para procesar medios
     let mediosArray: string[] = [];
     
     if (publicacion.medios && Array.isArray(publicacion.medios)) {
@@ -125,6 +140,15 @@ const Busqueda: React.FC = () => {
     }
   };
 
+  const handleUsuarioClick = (idUsuario: number) => {
+    if (!token) {
+      alert("Debes iniciar sesión para ver perfiles de usuario");
+      navigate("/login");
+    } else {
+      navigate(`/usuario/${idUsuario}`);
+    }
+  };
+
   if (loading) return <p className="no-resultados">Cargando...</p>;
 
   return (
@@ -145,7 +169,7 @@ const Busqueda: React.FC = () => {
       </header>
 
       <main className="busqueda-resultados">
-        <button onClick={() => navigate("/categorias")} className="back-btn">
+        <button onClick={() => navigate("/principal")} className="back-btn">
           ← Volver al inicio
         </button>
 
@@ -162,88 +186,145 @@ const Busqueda: React.FC = () => {
           </h2>
         )}
 
-        {publicaciones.length > 0 ? (
-          <div className="publicaciones-grid">
-            {publicaciones.map((publicacion) => {
-              const medios = procesarMediosPublicacion(publicacion);
-              const etiquetas = procesarEtiquetas(publicacion.etiquetas);
-              
-              return (
-                <div key={publicacion.id_publicacion} className="resultado-card">
-                  <div className="resultado-header">
-                    <div className="usuario-link">
-                      <img
-                        src={publicacion.usuario?.perfil?.foto_perfil || defaultProfile}
-                        alt="Perfil"
-                        className="usuario-avatar"
-                      />
-                      <div className="usuario-info">
-                        <strong className="usuario-nombre">
-                          {publicacion.usuario?.nombre_usuario || "Usuario"}
-                        </strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="resultado-content">
-                    <p className="publicacion-contenido">{publicacion.contenido}</p>
-                    
-                    {etiquetas.length > 0 && (
-                      <div className="etiquetas-container">
-                        {etiquetas.map((tag: string, index: number) => (
-                          <span key={index} className="etiqueta-busqueda">
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {medios.length > 0 && (
-                      <div className="publicacion-medios">
-                        {medios.slice(0, 3).map((medio: string, index: number) => {
-                          const esVideo = /\.(mp4|avi|mov|wmv|flv|webm)$/i.test(medio);
-                          
-                          return (
-                            <div key={index} className="medio-item">
-                              {esVideo ? (
-                                <div className="video-container">
-                                  <video controls className="publicacion-video">
-                                    <source src={medio} type="video/mp4" />
-                                  </video>
-                                </div>
-                              ) : (
-                                <img
-                                  src={medio}
-                                  className="publicacion-imagen"
-                                  alt={`Publicación ${index + 1}`}
-                                />
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="resultado-footer">
-                    <span className="fecha-publicacion">
-                      {new Date(publicacion.fecha_creacion).toLocaleDateString()}
+        {/* SECCIÓN DE USUARIOS ENCONTRADOS */}
+        {mostrarUsuarios && usuarios.length > 0 && (
+          <section className="seccion-usuarios">
+            <h3 className="subtitulo-resultados">
+              Usuarios encontrados ({usuarios.length})
+            </h3>
+            <div className="usuarios-grid">
+              {usuarios.map((usuario) => (
+                <div 
+                  key={usuario.id_usuario} 
+                  className="usuario-card"
+                  onClick={() => handleUsuarioClick(usuario.id_usuario)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <img
+                    src={usuario.foto_perfil || usuario.perfil?.foto_perfil || defaultProfile}
+                    alt={`Perfil de ${usuario.nombre_usuario}`}
+                    className="usuario-avatar-grande"
+                  />
+                  <div className="usuario-info-detallada">
+                    <strong className="usuario-nombre">{usuario.nombre_usuario}</strong>
+                    <span className="usuario-nombre-completo">
+                      {usuario.nombre || ''} {usuario.apellido || ''}
                     </span>
-                    {!token && (
-                      <span className="aviso-login-accion">
-                        <Link to="/login">Inicia sesión</Link> para comentar o dar like
-                      </span>
+                    {usuario.perfil?.descripcion && (
+                      <p className="usuario-descripcion">
+                        {usuario.perfil.descripcion.substring(0, 50)}...
+                      </p>
                     )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* SECCIÓN DE PUBLICACIONES */}
+        {publicaciones.length > 0 ? (
+          <section className="seccion-publicaciones">
+            {mostrarUsuarios && (
+              <h3 className="subtitulo-resultados">
+                Publicaciones encontradas ({publicaciones.length})
+              </h3>
+            )}
+            <div className="publicaciones-grid">
+              {publicaciones.map((publicacion) => {
+                const medios = procesarMediosPublicacion(publicacion);
+                const etiquetas = procesarEtiquetas(publicacion.etiquetas);
+                
+                return (
+                  <div key={publicacion.id_publicacion} className="resultado-card">
+                    <div className="resultado-header">
+                      <div 
+                        className="usuario-link"
+                        onClick={() => publicacion.usuario?.id_usuario && handleUsuarioClick(publicacion.usuario.id_usuario)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <img
+                          src={publicacion.usuario?.perfil?.foto_perfil || defaultProfile}
+                          alt="Perfil"
+                          className="usuario-avatar"
+                        />
+                        <div className="usuario-info">
+                          <strong className="usuario-nombre">
+                            {publicacion.usuario?.nombre_usuario || "Usuario"}
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="resultado-content">
+                      <p className="publicacion-contenido">{publicacion.contenido}</p>
+                      
+                      {etiquetas.length > 0 && (
+                        <div className="etiquetas-container">
+                          {etiquetas.map((tag: string, index: number) => (
+                            <span key={index} className="etiqueta-busqueda">
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {medios.length > 0 && (
+                        <div className="publicacion-medios">
+                          {medios.slice(0, 3).map((medio: string, index: number) => {
+                            const esVideo = /\.(mp4|avi|mov|wmv|flv|webm)$/i.test(medio);
+                            
+                            return (
+                              <div key={index} className="medio-item">
+                                {esVideo ? (
+                                  <div className="video-container">
+                                    <video controls className="publicacion-video">
+                                      <source src={medio} type="video/mp4" />
+                                    </video>
+                                  </div>
+                                ) : (
+                                  <img
+                                    src={medio}
+                                    className="publicacion-imagen"
+                                    alt={`Publicación ${index + 1}`}
+                                  />
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="resultado-footer">
+                      <span className="fecha-publicacion">
+                        {new Date(publicacion.fecha_creacion).toLocaleDateString()}
+                      </span>
+                      {!token && (
+                        <span className="aviso-login-accion">
+                          <Link to="/login">Inicia sesión</Link> para comentar o dar like
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
         ) : (
           <p className="no-resultados">
             {categoriaNombre 
               ? `No hay publicaciones en la categoría "${categoriaNombre}"`
+              : query && !buscando
+              ? "No se encontraron resultados"
               : "Realiza una búsqueda para encontrar contenido"}
+          </p>
+        )}
+
+        {/* Mensaje si no hay resultados */}
+        {mostrarUsuarios && usuarios.length === 0 && publicaciones.length === 0 && query && !buscando && (
+          <p className="no-resultados">
+            No se encontraron resultados para "{query}"
           </p>
         )}
       </main>

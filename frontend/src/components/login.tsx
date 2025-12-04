@@ -116,7 +116,12 @@ const facebookLogin = async () => {
         
         <div className="header-box">
           <h1>ARTENITY</h1>
-          <img src={logoImg} alt="Logo" className="logo" />
+          <button 
+                        className="logo-btn"
+                        onClick={() => navigate("/")}
+                      >
+                        <img src={logoImg} alt="Logo Artenity" className="logo" />
+                      </button>
         </div>
 
         {/* SOCIAL LOGIN */}

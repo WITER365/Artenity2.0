@@ -126,7 +126,7 @@ interface UsuarioBusqueda {
   sigo: boolean;
 }
 
-// Componente de Comentario separado para mejor organización
+
 const ComentarioComponent = ({ 
   comentario, 
   nivel = 0, 
@@ -518,7 +518,7 @@ export default function PaginaPrincipal() {
           })
           .filter((url): url is string => url !== null && url.trim() !== '');
 
-      // Dentro de cargarPublicaciones, en el map de posts:
+      
 return {
   ...p,
   medios: mediosArray,
