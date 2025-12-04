@@ -145,7 +145,7 @@ const Busqueda: React.FC = () => {
       </header>
 
       <main className="busqueda-resultados">
-        <button onClick={() => navigate("/")} className="back-btn">
+        <button onClick={() => navigate("/categorias")} className="back-btn">
           ← Volver al inicio
         </button>
 
