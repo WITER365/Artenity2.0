@@ -3336,6 +3336,190 @@ def obtener_usuario_basico(id_usuario: int, db: Session = Depends(get_db)):
             "descripcion": usuario.perfil.descripcion if usuario.perfil else None
         } if usuario.perfil else None
     }
+
+# ================== SUGERENCIAS DE USUARIOS ==================
+@app.get("/sugerencias-usuarios")
+def obtener_sugerencias_usuarios(
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """
+    Obtener sugerencias de usuarios para seguir basadas en:
+    1. Usuarios populares (con más likes en sus publicaciones)
+    2. Usuarios que los amigos siguen
+    3. Usuarios con intereses similares
+    """
+    try:
+        # Obtener usuarios que el usuario actual YA sigue
+        usuarios_seguidos = db.query(models.SeguirUsuario.id_seguido).filter(
+            models.SeguirUsuario.id_seguidor == user_id
+        ).all()
+        ids_usuarios_seguidos = [us[0] for us in usuarios_seguidos]
+        
+        # Obtener usuarios bloqueados
+        usuarios_bloqueados = db.query(models.BloqueoUsuario.id_bloqueado).filter(
+            models.BloqueoUsuario.id_bloqueador == user_id
+        ).all()
+        ids_usuarios_bloqueados = [ub[0] for ub in usuarios_bloqueados]
+        
+        usuarios_que_me_bloquearon = db.query(models.BloqueoUsuario.id_bloqueador).filter(
+            models.BloqueoUsuario.id_bloqueado == user_id
+        ).all()
+        ids_usuarios_que_me_bloquearon = [ub[0] for ub in usuarios_que_me_bloquearon]
+
+        # Excluir al usuario actual, usuarios seguidos, bloqueados, y que me bloquearon
+        usuarios_excluidos = set(
+            [user_id] + 
+            ids_usuarios_seguidos + 
+            ids_usuarios_bloqueados + 
+            ids_usuarios_que_me_bloquearon
+        )
+
+        # ALGORITMO 1: Usuarios populares basados en likes recibidos
+        usuarios_populares = []
+        
+        # Obtener todos los usuarios excepto los excluidos
+        candidatos = db.query(models.Usuario).filter(
+            ~models.Usuario.id_usuario.in_(list(usuarios_excluidos))
+        ).all()
+        
+        for usuario in candidatos:
+            # Calcular puntuación basada en likes recibidos
+            total_likes = 0
+            
+            # Obtener publicaciones del usuario
+            publicaciones = db.query(models.Publicacion).filter(
+                models.Publicacion.id_usuario == usuario.id_usuario
+            ).all()
+            
+            for pub in publicaciones:
+                # Contar likes de cada publicación
+                likes_pub = db.query(models.MeGusta).filter(
+                    models.MeGusta.id_publicacion == pub.id_publicacion
+                ).count()
+                total_likes += likes_pub
+            
+            # Obtener información del perfil
+            perfil = db.query(models.Perfil).filter(
+                models.Perfil.id_usuario == usuario.id_usuario
+            ).first()
+            
+            # Obtener estadísticas adicionales
+            seguidores_count = db.query(models.SeguirUsuario).filter(
+                models.SeguirUsuario.id_seguido == usuario.id_usuario
+            ).count()
+            
+            publicaciones_count = len(publicaciones)
+            
+            # Solo incluir usuarios con al menos alguna actividad
+            if total_likes > 0 or publicaciones_count > 0:
+                usuarios_populares.append({
+                    "id_usuario": usuario.id_usuario,
+                    "nombre_usuario": usuario.nombre_usuario,
+                    "nombre": usuario.nombre,
+                    "foto_perfil": perfil.foto_perfil if perfil else None,
+                    "puntuacion": total_likes,  # Puntuación basada en likes
+                    "estadisticas": {
+                        "likes_totales": total_likes,
+                        "seguidores": seguidores_count,
+                        "publicaciones": publicaciones_count
+                    }
+                })
+        
+        # Ordenar por puntuación (likes) descendente
+        usuarios_populares.sort(key=lambda x: x["puntuacion"], reverse=True)
+        
+        # ALGORITMO 2: Usuarios que siguen mis amigos (si tiene amigos)
+        sugerencias_amigos = []
+        
+        # Obtener amigos del usuario
+        amistades = db.query(models.Amistad).filter(
+            ((models.Amistad.id_usuario1 == user_id) | (models.Amistad.id_usuario2 == user_id)),
+            models.Amistad.estado == "aceptada"
+        ).all()
+        
+        amigos_ids = []
+        for amistad in amistades:
+            if amistad.id_usuario1 == user_id:
+                amigos_ids.append(amistad.id_usuario2)
+            else:
+                amigos_ids.append(amistad.id_usuario1)
+        
+        if amigos_ids:
+            # Obtener usuarios que mis amigos siguen
+            for amigo_id in amigos_ids[:10]:  # Limitar a los primeros 10 amigos
+                seguidos_por_amigo = db.query(models.SeguirUsuario).filter(
+                    models.SeguirUsuario.id_seguidor == amigo_id,
+                    ~models.SeguirUsuario.id_seguido.in_(list(usuarios_excluidos))
+                ).limit(3).all()
+                
+                for seguido in seguidos_por_amigo:
+                    usuario_seguido = db.query(models.Usuario).filter(
+                        models.Usuario.id_usuario == seguido.id_seguido
+                    ).first()
+                    
+                    if usuario_seguido:
+                        perfil_seguido = db.query(models.Perfil).filter(
+                            models.Perfil.id_usuario == usuario_seguido.id_usuario
+                        ).first()
+                        
+                        # Verificar si ya está en la lista
+                        if not any(u["id_usuario"] == usuario_seguido.id_usuario for u in sugerencias_amigos):
+                            sugerencias_amigos.append({
+                                "id_usuario": usuario_seguido.id_usuario,
+                                "nombre_usuario": usuario_seguido.nombre_usuario,
+                                "nombre": usuario_seguido.nombre,
+                                "foto_perfil": perfil_seguido.foto_perfil if perfil_seguido else None,
+                                "recomendado_por": "amigos",
+                                "fecha_seguimiento": seguido.fecha_seguimiento
+                            })
+        
+        # Combinar resultados (priorizando usuarios populares)
+        resultados = []
+        ids_agregados = set()
+        
+        # Agregar usuarios populares (hasta 8)
+        for usuario in usuarios_populares[:8]:
+            resultados.append({
+                **usuario,
+                "tipo": "popular"
+            })
+            ids_agregados.add(usuario["id_usuario"])
+        
+        # Agregar sugerencias de amigos (hasta 4, evitando duplicados)
+        for usuario in sugerencias_amigos:
+            if len(resultados) >= 10:
+                break
+            if usuario["id_usuario"] not in ids_agregados:
+                resultados.append({
+                    **usuario,
+                    "tipo": "recomendado_amigos",
+                    "puntuacion": 0,
+                    "estadisticas": {
+                        "likes_totales": 0,
+                        "seguidores": 0,
+                        "publicaciones": 0
+                    }
+                })
+                ids_agregados.add(usuario["id_usuario"])
+        
+        # Mezclar resultados para mejor presentación
+        import random
+        random.shuffle(resultados)
+        
+        return {
+            "sugerencias": resultados[:10],  # Máximo 10 sugerencias
+            "total_populares": len(usuarios_populares),
+            "total_recomendados": len(sugerencias_amigos)
+        }
+        
+    except Exception as e:
+        print(f"❌ Error obteniendo sugerencias de usuarios: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error al obtener sugerencias: {str(e)}"
+        )
+
 # ------------------ HOME ------------------
 @app.get("/home")
 def home():

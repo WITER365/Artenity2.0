@@ -41,12 +41,29 @@ import {
   quitarMeGustaComentario,
   compartirPublicacion,
   obtenerAmigos,
-  buscarUsuarios
+  buscarUsuarios,
+  seguirUsuario,
+  obtenerSugerenciasUsuarios
 } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import NotificacionesPanel from "../components/NotificacionesPanel";
 
 // Interfaces TypeScript
+interface SugerenciaUsuario {
+  id_usuario: number;
+  nombre_usuario: string;
+  nombre: string;
+  foto_perfil: string | null;
+  puntuacion: number;
+  tipo: "popular" | "recomendado_amigos";
+  recomendado_por?: string;
+  estadisticas: {
+    likes_totales: number;
+    seguidores: number;
+    publicaciones: number;
+  };
+}
+
 interface Publicacion {
   id_publicacion: number;
   id_usuario: number;
@@ -63,7 +80,7 @@ interface Publicacion {
     };
   };
   imagen?: string;
-  etiquetas?: string[] | string; // Actualizado para aceptar array o string
+  etiquetas?: string[] | string;
 }
 
 interface EstadisticasPublicacion {
@@ -125,7 +142,6 @@ interface UsuarioBusqueda {
   };
   sigo: boolean;
 }
-
 
 const ComentarioComponent = ({ 
   comentario, 
@@ -232,7 +248,6 @@ const ComentarioComponent = ({
             )}
           </div>
 
-          {/* Mostrar el campo de respuesta solo cuando el botón se ha clickeado */}
           {mostrarInputRespuesta && respondiendoA[idPublicacion] === comentario.id_comentario && (
             <div className="respuesta-directa">
               <div className="respuesta-input-container">
@@ -307,6 +322,10 @@ export default function PaginaPrincipal() {
   const [etiquetas, setEtiquetas] = useState<string[]>([]);
   const [inputEtiqueta, setInputEtiqueta] = useState("");
   
+  // Estados para sugerencias
+  const [sugerencias, setSugerencias] = useState<SugerenciaUsuario[]>([]);
+  const [cargandoSugerencias, setCargandoSugerencias] = useState(false);
+  
   // Lista de categorías disponibles
   const categoriasDisponibles = [
     "Danza", "Música", "Cine", "Literatura", 
@@ -354,6 +373,12 @@ export default function PaginaPrincipal() {
   }, [mostrarSeleccionAmigos]);
 
   useEffect(() => {
+    if (usuario?.id_usuario) {
+      cargarSugerenciasUsuarios();
+    }
+  }, [usuario]);
+
+  useEffect(() => {
     const handleClickOutside = () => {
       setMenuAbierto(null);
       setCompartirAbierto(null);
@@ -361,6 +386,47 @@ export default function PaginaPrincipal() {
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
+
+  // FUNCIÓN PARA CARGAR SUGERENCIAS DE USUARIOS
+  const cargarSugerenciasUsuarios = async () => {
+    try {
+      setCargandoSugerencias(true);
+      const data = await obtenerSugerenciasUsuarios();
+      setSugerencias(data.sugerencias || []);
+    } catch (error) {
+      console.error("Error cargando sugerencias:", error);
+      setSugerencias([]);
+    } finally {
+      setCargandoSugerencias(false);
+    }
+  };
+
+  // FUNCIÓN PARA SEGUIR A UN USUARIO SUGERIDO
+  const manejarSeguirSugerido = async (idUsuario: number) => {
+    try {
+      await seguirUsuario(idUsuario);
+      
+      // Actualizar lista de sugerencias (eliminar al usuario seguido)
+      setSugerencias(prev => prev.filter(s => s.id_usuario !== idUsuario));
+      
+      // Mostrar notificación
+      const notificacionEvent = new CustomEvent('nuevaNotificacion', {
+        detail: { mensaje: 'Usuario seguido exitosamente', tipo: 'exito' }
+      });
+      window.dispatchEvent(notificacionEvent);
+      
+    } catch (error: any) {
+      console.error("Error siguiendo usuario:", error);
+      
+      const notificacionEvent = new CustomEvent('nuevaNotificacion', {
+        detail: { 
+          mensaje: error.response?.data?.detail || 'Error al seguir usuario', 
+          tipo: 'error' 
+        }
+      });
+      window.dispatchEvent(notificacionEvent);
+    }
+  };
 
   // FUNCIÓN PARA AGREGAR ETIQUETA
   const agregarEtiqueta = (etiqueta: string) => {
@@ -406,7 +472,7 @@ export default function PaginaPrincipal() {
         setResultadosBusqueda([]);
         setMostrarResultados(false);
       }
-    }, 300); // Debounce de 300ms
+    }, 300);
 
     return () => clearTimeout(timeoutId);
   }, [busqueda, buscarUsuariosHandler]);
@@ -483,12 +549,10 @@ export default function PaginaPrincipal() {
         let mediosArray: string[] = [];
         
         if (p.medios && Array.isArray(p.medios)) {
-          // Si ya viene el array de medios
           mediosArray = p.medios;
         } else if (p.imagen) {
           try {
             if (typeof p.imagen === 'string') {
-              // Intentar parsear como JSON
               const parsed = JSON.parse(p.imagen);
               if (Array.isArray(parsed)) {
                 mediosArray = parsed;
@@ -498,11 +562,9 @@ export default function PaginaPrincipal() {
                 mediosArray = [parsed];
               }
             } else if (typeof p.imagen === 'string' && p.imagen.includes('http')) {
-              // URL directa
               mediosArray = [p.imagen];
             }
           } catch (error) {
-            // Fallback para string simple
             if (typeof p.imagen === 'string' && p.imagen.includes('http')) {
               mediosArray = [p.imagen];
             }
@@ -518,36 +580,33 @@ export default function PaginaPrincipal() {
           })
           .filter((url): url is string => url !== null && url.trim() !== '');
 
-      
-return {
-  ...p,
-  medios: mediosArray,
-  etiquetas: p.etiquetas ? 
-    (() => {
-      try {
-        if (typeof p.etiquetas === 'string') {
-          // Si empieza con [ y termina con ], es JSON
-          if (p.etiquetas.trim().startsWith('[') && p.etiquetas.trim().endsWith(']')) {
-            return JSON.parse(p.etiquetas);
-          }
-          // Si no, devolver como array con un solo elemento
-          return [p.etiquetas];
-        }
-        return Array.isArray(p.etiquetas) ? p.etiquetas : [];
-      } catch (error) {
-        console.error("Error parsing etiquetas:", error);
-        return [];
-      }
-    })() 
-    : [],
-  usuario: {
-    ...p.usuario,
-    perfil: {
-      ...p.usuario?.perfil,
-      foto_perfil: fotoPerfil,
-    },
-  },
-};
+      return {
+        ...p,
+        medios: mediosArray,
+        etiquetas: p.etiquetas ? 
+          (() => {
+            try {
+              if (typeof p.etiquetas === 'string') {
+                if (p.etiquetas.trim().startsWith('[') && p.etiquetas.trim().endsWith(']')) {
+                  return JSON.parse(p.etiquetas);
+                }
+                return [p.etiquetas];
+              }
+              return Array.isArray(p.etiquetas) ? p.etiquetas : [];
+            } catch (error) {
+              console.error("Error parsing etiquetas:", error);
+              return [];
+            }
+          })() 
+          : [],
+        usuario: {
+          ...p.usuario,
+          perfil: {
+            ...p.usuario?.perfil,
+            foto_perfil: fotoPerfil,
+          },
+        },
+      };
       });
 
       setPublicaciones(postsProcesados);
@@ -924,7 +983,7 @@ return {
       
       {/* Barra superior */}
       <div className="topbar">
-        {/*  BÚSQUEDA DE USUARIOS */}
+        {/* BÚSQUEDA DE USUARIOS */}
         <div className="search-container"
           style={{
             position: 'relative',
@@ -1548,7 +1607,97 @@ return {
       {/* Sidebar derecha */}
       <aside className="right-sidebar">
         <div className="card"><h2>LO QUE SUCEDE CON EL MUNDO DEL ARTE</h2></div>
-        <div className="card"><h2>A QUIÉN SEGUIR</h2></div>
+        
+        {/* SECCIÓN "A QUIÉN SEGUIR" */}
+     <div className="card sugerencias-seguir">
+  <div className="sugerencias-header">
+    <h2>A QUIÉN SEGUIR</h2>
+    {sugerencias.length > 0 && !cargandoSugerencias && (
+      <span className="sugerencias-contador">
+        {sugerencias.length} sugerencias
+      </span>
+    )}
+  </div>
+  
+  {cargandoSugerencias ? (
+    <div className="cargando-sugerencias">
+      <div className="spinner"></div>
+      <p>Cargando sugerencias...</p>
+    </div>
+  ) : sugerencias.length > 0 ? (
+    <>
+      <div className="lista-sugerencias">
+        {sugerencias.map((sugerencia) => (
+          <div key={sugerencia.id_usuario} className="sugerencia-item">
+            <Link to={`/usuario/${sugerencia.id_usuario}`} className="sugerencia-link">
+              <img
+                src={sugerencia.foto_perfil || defaultProfile}
+                alt={sugerencia.nombre_usuario}
+                className="foto-perfil-sugerencia"
+                onError={(e) => {
+                  e.currentTarget.src = defaultProfile;
+                }}
+              />
+              <div className="sugerencia-info">
+                <span className="sugerencia-username" title={sugerencia.nombre_usuario}>
+                  {sugerencia.nombre_usuario}
+                </span>
+                <span className="sugerencia-nombre" title={sugerencia.nombre}>
+                  {sugerencia.nombre}
+                </span>
+                
+                {/* Indicador de popularidad */}
+                {sugerencia.tipo === "popular" && sugerencia.estadisticas.likes_totales > 0 && (
+                  <div className="popularidad-indicator">
+                    <Heart size={12} />
+                    <span title={`${sugerencia.estadisticas.likes_totales} likes totales`}>
+                      {sugerencia.estadisticas.likes_totales.toLocaleString()} likes
+                    </span>
+                    <span className="separador">•</span>
+                    <span title={`${sugerencia.estadisticas.seguidores} seguidores`}>
+                      {sugerencia.estadisticas.seguidores.toLocaleString()} seguidores
+                    </span>
+                  </div>
+                )}
+                
+                {sugerencia.tipo === "recomendado_amigos" && (
+                  <div className="recomendado-por" title="Recomendado por tus amigos">
+                    <Users size={12} />
+                    <span>Recomendado por amigos</span>
+                  </div>
+                )}
+              </div>
+            </Link>
+            
+            <button 
+              onClick={() => manejarSeguirSugerido(sugerencia.id_usuario)}
+              className="btn-seguir-sugerencia"
+              title={`Seguir a ${sugerencia.nombre_usuario}`}
+            >
+              Seguir
+            </button>
+          </div>
+        ))}
+      </div>
+      
+      <div className="sugerencias-footer">
+        <button 
+          onClick={cargarSugerenciasUsuarios}
+          className="btn-ver-mas"
+          title="Cargar más sugerencias"
+        >
+          Ver más sugerencias
+        </button>
+      </div>
+    </>
+  ) : (
+    <div className="sin-sugerencias">
+      <Users size={24} />
+      <p>No hay sugerencias disponibles</p>
+      <span>Interactúa más para ver recomendaciones</span>
+    </div>
+  )}
+</div>
       </aside>
     </div>
   );

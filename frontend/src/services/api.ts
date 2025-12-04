@@ -803,3 +803,38 @@ export async function obtenerContenidoCategoria(categoriaNombre: string): Promis
     return res.data;
   }
 }
+
+// ================== SUGERENCIAS DE USUARIOS ==================
+
+export interface SugerenciaUsuario {
+  id_usuario: number;
+  nombre_usuario: string;
+  nombre: string;
+  foto_perfil: string | null;
+  puntuacion: number;
+  tipo: "popular" | "recomendado_amigos";
+  recomendado_por?: string;
+  estadisticas: {
+    likes_totales: number;
+    seguidores: number;
+    publicaciones: number;
+  };
+}
+
+export interface SugerenciasResponse {
+  sugerencias: SugerenciaUsuario[];
+  total_populares: number;
+  total_recomendados: number;
+}
+
+export async function obtenerSugerenciasUsuarios(): Promise<SugerenciasResponse> {
+  try {
+    const res = await api.get("/sugerencias-usuarios", {
+      headers: getAuthHeaders(),
+    });
+    return res.data;
+  } catch (error) {
+    console.error("Error obteniendo sugerencias de usuarios:", error);
+    throw error;
+  }
+}
