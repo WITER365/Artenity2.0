@@ -938,3 +938,160 @@ export async function eliminarCuenta(id_usuario: number, confirmacion: string): 
     throw error; // Propaga el error para que el frontend lo maneje
   }
 }
+
+
+// ================== GALERÍA DE ARTE ==================
+
+export interface CarpetaGaleria {
+  id_carpeta: number;
+  id_usuario: number;
+  nombre: string;
+  descripcion?: string;
+  color: string;
+  icono: string;
+  es_publica: boolean;
+  fecha_creacion: string;
+  fecha_actualizacion: string;
+  total_archivos: number;
+  tamano_total: number;
+}
+
+export interface ArchivoGaleria {
+  id_archivo: number;
+  id_carpeta: number;
+  id_usuario: number;
+  nombre_original: string;
+  nombre_archivo: string;
+  tipo: string;
+  extension: string;
+  tamano: number;
+  ruta: string;
+  miniatura?: string;
+  duracion?: number;
+  resolucion?: string;
+  descripcion?: string;
+  etiquetas?: string[];
+  es_publico: boolean;
+  fecha_subida: string;
+  fecha_actualizacion: string;
+  carpeta_nombre?: string;
+}
+
+export interface EstadisticasGaleria {
+  total_carpetas: number;
+  total_archivos: number;
+  tamano_total: number;
+  tamano_total_mb: number;
+  tipos_archivos: Record<string, number>;
+}
+
+export interface GaleriaPublica {
+  usuario: {
+    id_usuario: number;
+    nombre_usuario: string;
+    foto_perfil?: string;
+  };
+  carpetas_publicas: Array<{
+    carpeta: Omit<CarpetaGaleria, 'total_archivos' | 'tamano_total'>;
+    archivos: Array<Omit<ArchivoGaleria, 'id_carpeta' | 'id_usuario' | 'carpeta_nombre'>>;
+  }>;
+  archivos_sueltos: Array<Omit<ArchivoGaleria, 'id_carpeta' | 'id_usuario' | 'carpeta_nombre'>>;
+}
+
+export interface PublicarDesdeGaleriaData {
+  id_archivo: number;
+  contenido?: string;
+  etiquetas?: string[];
+}
+
+// Obtener estadísticas de la galería
+export const obtenerEstadisticasGaleria = async (): Promise<EstadisticasGaleria> => {
+  const res = await api.get("/galeria/estadisticas", { headers: getAuthHeaders() });
+  return res.data;
+};
+
+// Obtener carpetas
+export const obtenerCarpetasGaleria = async (): Promise<CarpetaGaleria[]> => {
+  const res = await api.get("/galeria/carpetas", { headers: getAuthHeaders() });
+  return res.data;
+};
+
+// Crear carpeta
+export const crearCarpetaGaleria = async (carpeta: Omit<CarpetaGaleria, 'id_carpeta' | 'id_usuario' | 'fecha_creacion' | 'fecha_actualizacion' | 'total_archivos' | 'tamano_total'>): Promise<CarpetaGaleria> => {
+  const res = await api.post("/galeria/carpetas", carpeta, { headers: getAuthHeaders() });
+  return res.data;
+};
+
+// Actualizar carpeta
+export const actualizarCarpetaGaleria = async (idCarpeta: number, carpeta: Partial<CarpetaGaleria>): Promise<CarpetaGaleria> => {
+  const res = await api.put(`/galeria/carpetas/${idCarpeta}`, carpeta, { headers: getAuthHeaders() });
+  return res.data;
+};
+
+// Eliminar carpeta
+export const eliminarCarpetaGaleria = async (idCarpeta: number): Promise<void> => {
+  await api.delete(`/galeria/carpetas/${idCarpeta}`, { headers: getAuthHeaders() });
+};
+
+// Subir archivo a la galería
+export const subirArchivoGaleria = async (data: FormData): Promise<ArchivoGaleria> => {
+  const res = await api.post("/galeria/archivos/subir", data, {
+    headers: {
+      ...getAuthHeaders(),
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return res.data;
+};
+
+// Obtener archivos de la galería
+export const obtenerArchivosGaleria = async (filtros?: {
+  id_carpeta?: number;
+  tipo?: string;
+  busqueda?: string;
+}): Promise<ArchivoGaleria[]> => {
+  const params = new URLSearchParams();
+  if (filtros?.id_carpeta) params.append("id_carpeta", filtros.id_carpeta.toString());
+  if (filtros?.tipo) params.append("tipo", filtros.tipo);
+  if (filtros?.busqueda) params.append("busqueda", filtros.busqueda);
+  
+  const query = params.toString();
+  const url = query ? `/galeria/archivos?${query}` : "/galeria/archivos";
+  
+  const res = await api.get(url, { headers: getAuthHeaders() });
+  return res.data;
+};
+
+// Obtener detalles de un archivo
+export const obtenerArchivoDetalle = async (idArchivo: number): Promise<ArchivoGaleria> => {
+  const res = await api.get(`/galeria/archivos/${idArchivo}`, { headers: getAuthHeaders() });
+  return res.data;
+};
+
+// Actualizar archivo
+export const actualizarArchivoGaleria = async (idArchivo: number, data: FormData): Promise<ArchivoGaleria> => {
+  const res = await api.put(`/galeria/archivos/${idArchivo}`, data, {
+    headers: {
+      ...getAuthHeaders(),
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return res.data;
+};
+
+// Eliminar archivo
+export const eliminarArchivoGaleria = async (idArchivo: number): Promise<void> => {
+  await api.delete(`/galeria/archivos/${idArchivo}`, { headers: getAuthHeaders() });
+};
+
+// Publicar desde la galería
+export const publicarDesdeGaleria = async (data: PublicarDesdeGaleriaData): Promise<any> => {
+  const res = await api.post("/galeria/publicar", data, { headers: getAuthHeaders() });
+  return res.data;
+};
+
+// Obtener galería pública de un usuario
+export const obtenerGaleriaPublica = async (idUsuario: number): Promise<GaleriaPublica> => {
+  const res = await api.get(`/galeria/public/${idUsuario}`);
+  return res.data;
+};

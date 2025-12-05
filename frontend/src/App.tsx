@@ -1,7 +1,7 @@
 // frontend/App.tsx
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
-
+import GaleriaDeArte from './components/GaleriaDearte';
 import Artenity from "./components/artenity";
 import Login from "./components/login";
 import Register from "./components/register";
@@ -39,7 +39,8 @@ function App() {
       <Route path="/mensajes" element={token ? <Messages /> : <Navigate to="/login" />} />
       <Route path="/categorias" element={token ? <CategoriasPage /> : <Navigate to="/login" />} />
       <Route path="/compartidos" element={token ? <CompartidosPage /> : <Navigate to="/login" />} />
-      
+      <Route path="/galeria" element={<GaleriaDeArte />} />
+
 <Route path="/configuraciones" element={token ? <Configuraciones /> : <Navigate to="/login" />} />
       {/* Ruta fallback */}
       <Route path="*" element={<Navigate to="/" />} />

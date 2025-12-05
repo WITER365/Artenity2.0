@@ -1,5 +1,5 @@
 # backend/models.py
-from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Boolean, Text, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Boolean, Text, UniqueConstraint, BigInteger
 from sqlalchemy.orm import relationship
 from datetime import datetime, timedelta
 from .database import Base
@@ -365,4 +365,69 @@ class ReporteProblema(Base):
     estado = Column(String(50), default="pendiente")  # pendiente, en_proceso, resuelto
     
     # Relaciones
+    usuario = relationship("Usuario")
+# AGREGAR AL FINAL DEL ARCHIVO backend/models.py
+
+# ------------------ GALERÍA DE ARTE ------------------
+class GaleriaCarpeta(Base):
+    __tablename__ = "galeria_carpetas"
+    
+    id_carpeta = Column(Integer, primary_key=True, index=True)
+    id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario", ondelete="CASCADE"))
+    nombre = Column(String(100), nullable=False)
+    descripcion = Column(String(500), nullable=True)
+    color = Column(String(20), default="#6C63FF")
+    icono = Column(String(50), default="folder")
+    es_publica = Column(Boolean, default=False)
+    fecha_creacion = Column(DateTime, default=datetime.utcnow)
+    fecha_actualizacion = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relaciones
+    usuario = relationship("Usuario")
+    archivos = relationship("GaleriaArchivo", back_populates="carpeta", cascade="all, delete-orphan")
+    
+    # Índice único para nombre por usuario
+    __table_args__ = (
+        UniqueConstraint("id_usuario", "nombre", name="uq_usuario_nombre_carpeta"),
+    )
+
+
+class GaleriaArchivo(Base):
+    __tablename__ = "galeria_archivos"
+    
+    id_archivo = Column(Integer, primary_key=True, index=True)
+    id_carpeta = Column(Integer, ForeignKey("galeria_carpetas.id_carpeta", ondelete="CASCADE"))
+    id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario", ondelete="CASCADE"))
+    nombre_original = Column(String(255), nullable=False)
+    nombre_archivo = Column(String(255), nullable=False)
+    tipo = Column(String(50), nullable=False)  # imagen, video, audio, documento, boceto
+    extension = Column(String(20), nullable=False)
+    tamano = Column(BigInteger, nullable=False)  # Cambiar a BigInteger # en bytes
+    ruta = Column(String(500), nullable=False)
+    miniatura = Column(String(500), nullable=True)  # Para videos/imágenes
+    duracion = Column(Integer, nullable=True)  # Para audio/video (segundos)
+    resolucion = Column(String(20), nullable=True)  # Para imágenes/videos
+    descripcion = Column(String(500), nullable=True)
+    etiquetas = Column(Text, nullable=True)  # JSON array
+    es_publico = Column(Boolean, default=False)
+    fecha_subida = Column(DateTime, default=datetime.utcnow)
+    fecha_actualizacion = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relaciones
+    carpeta = relationship("GaleriaCarpeta", back_populates="archivos")
+    usuario = relationship("Usuario")
+
+
+class GaleriaPublicacion(Base):
+    __tablename__ = "galeria_publicaciones"
+    
+    id_galeria_publicacion = Column(Integer, primary_key=True, index=True)
+    id_archivo = Column(Integer, ForeignKey("galeria_archivos.id_archivo", ondelete="CASCADE"))
+    id_publicacion = Column(Integer, ForeignKey("publicaciones.id_publicacion", ondelete="CASCADE"))
+    id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario", ondelete="CASCADE"))
+    fecha_publicacion = Column(DateTime, default=datetime.utcnow)
+    
+    # Relaciones
+    archivo = relationship("GaleriaArchivo")
+    publicacion = relationship("Publicacion")
     usuario = relationship("Usuario")

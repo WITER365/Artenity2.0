@@ -1,9 +1,11 @@
+#main.py
+from sqlalchemy import func  
 import os
 import shutil
 import secrets
 import string
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Optional
 from uuid import uuid4
 import json 
 import uuid
@@ -16,12 +18,13 @@ from fastapi_mail import ConnectionConfig, FastMail, MessageSchema
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session, joinedload
 from jose import jwt
-
 from backend import database, models, schemas
 from backend.config import settings
 from backend.database import get_db
 from backend.schemas import ForgotPasswordRequest, ResetPasswordRequest, ConfiguracionChatUpdate
-
+import subprocess
+import struct
+app = FastAPI()
 app = FastAPI()
 
 # ------------------ CORS ------------------
@@ -3732,6 +3735,741 @@ def reportar_problema(
             status_code=500, 
             detail=f"Error al enviar reporte: {str(e)}"
         )
+    
+# ================== GALERÍA DE ARTE ==================
+GALERIA_BASE_DIR = "static/galeria"
+os.makedirs(os.path.join(GALERIA_BASE_DIR, "imagenes"), exist_ok=True)
+os.makedirs(os.path.join(GALERIA_BASE_DIR, "videos"), exist_ok=True)
+os.makedirs(os.path.join(GALERIA_BASE_DIR, "audios"), exist_ok=True)
+os.makedirs(os.path.join(GALERIA_BASE_DIR, "documentos"), exist_ok=True)
+os.makedirs(os.path.join(GALERIA_BASE_DIR, "miniaturas"), exist_ok=True)
+
+ALLOWED_GALERIA_EXTENSIONS = {
+    "imagen": ["jpg", "jpeg", "png", "gif", "webp", "bmp"],
+    "video": ["mp4", "avi", "mov", "wmv", "flv", "webm", "mkv"],
+    "audio": ["mp3", "wav", "ogg", "m4a", "flac"],
+    "documento": ["pdf", "doc", "docx", "txt", "rtf"],
+}
+
+MAX_GALERIA_FILE_SIZE = 100 * 1024 * 1024  # 100MB
+
+def determinar_tipo_archivo(extension: str) -> str:
+    """Determina el tipo de archivo basado en la extensión"""
+    extension = extension.lower()
+    for tipo, extensiones in ALLOWED_GALERIA_EXTENSIONS.items():
+        if extension in extensiones:
+            return tipo
+    return "documento"
+
+def obtener_resolucion_imagen_simple(imagen_path: str) -> Optional[str]:
+    """Obtiene resolución de imagen sin PIL (solo para JPEG y PNG)"""
+    try:
+        with open(imagen_path, 'rb') as f:
+            # Para JPEG
+            f.seek(0)
+            if f.read(2) == b'\xff\xd8':
+                # Es JPEG
+                f.seek(0)
+                while True:
+                    marker, = struct.unpack('>H', f.read(2))
+                    if marker == 0xFFC0 or marker == 0xFFC1 or marker == 0xFFC2:
+                        # SOF marker encontrado
+                        f.read(3)  # Precisión y altura/anchura
+                        height, = struct.unpack('>H', f.read(2))
+                        width, = struct.unpack('>H', f.read(2))
+                        return f"{width}x{height}"
+                    elif marker == 0xFFDA:
+                        # Inicio de datos de imagen, salir
+                        break
+                    else:
+                        # Saltar este segmento
+                        length, = struct.unpack('>H', f.read(2))
+                        f.read(length - 2)
+            
+            # Para PNG
+            f.seek(0)
+            if f.read(8) == b'\x89PNG\r\n\x1a\n':
+                f.read(8)  # Saltar chunk IHDR
+                width = struct.unpack('>I', f.read(4))[0]
+                height = struct.unpack('>I', f.read(4))[0]
+                return f"{width}x{height}"
+    except:
+        pass
+    return None
+
+def obtener_duracion_video_ffprobe(video_path: str) -> Optional[int]:
+    """Obtiene duración del video usando ffprobe"""
+    try:
+        cmd = [
+            'ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+            '-of', 'default=noprint_wrappers=1:nokey=1', video_path
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            duration = float(result.stdout.strip())
+            return int(duration)
+    except:
+        pass
+    return None
+
+def generar_miniatura_ffmpeg(video_path: str, output_path: str) -> bool:
+    """Genera miniatura para video usando ffmpeg"""
+    try:
+        cmd = [
+            'ffmpeg', '-i', video_path, '-ss', '00:00:01', '-vframes', '1',
+            '-vf', 'scale=300:-1', '-y', output_path
+        ]
+        result = subprocess.run(cmd, capture_output=True, timeout=30)
+        return result.returncode == 0 and os.path.exists(output_path)
+    except:
+        return False
+
+@app.get("/galeria/estadisticas")
+def obtener_estadisticas_galeria(
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Obtener estadísticas de la galería del usuario"""
+    try:
+        total_carpetas = db.query(models.GaleriaCarpeta).filter(
+            models.GaleriaCarpeta.id_usuario == user_id
+        ).count()
+        
+        total_archivos = db.query(models.GaleriaArchivo).filter(
+            models.GaleriaArchivo.id_usuario == user_id
+        ).count()
+        
+        # Convertir Decimal a int
+        tamano_total_decimal = db.query(func.sum(models.GaleriaArchivo.tamano)).filter(
+            models.GaleriaArchivo.id_usuario == user_id
+        ).scalar()
+        tamano_total = int(tamano_total_decimal) if tamano_total_decimal else 0
+        
+        # Contar por tipo
+        tipos_query = db.query(
+            models.GaleriaArchivo.tipo,
+            func.count(models.GaleriaArchivo.id_archivo)
+        ).filter(
+            models.GaleriaArchivo.id_usuario == user_id
+        ).group_by(models.GaleriaArchivo.tipo).all()
+        
+        tipos_archivos = {tipo: cantidad for tipo, cantidad in tipos_query}
+        
+        return {
+            "total_carpetas": total_carpetas,
+            "total_archivos": total_archivos,
+            "tamano_total": tamano_total,
+            "tamano_total_mb": round(tamano_total / (1024 * 1024), 2),
+            "tipos_archivos": tipos_archivos
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error obteniendo estadísticas: {str(e)}")
+
+@app.post("/galeria/carpetas", response_model=schemas.CarpetaResponse)
+def crear_carpeta(
+    carpeta: schemas.CarpetaCreate,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Crear una nueva carpeta en la galería"""
+    try:
+        # Verificar si ya existe una carpeta con ese nombre
+        existente = db.query(models.GaleriaCarpeta).filter(
+            models.GaleriaCarpeta.id_usuario == user_id,
+            models.GaleriaCarpeta.nombre == carpeta.nombre
+        ).first()
+        
+        if existente:
+            raise HTTPException(status_code=400, detail="Ya tienes una carpeta con ese nombre")
+        
+        nueva_carpeta = models.GaleriaCarpeta(
+            id_usuario=user_id,
+            **carpeta.model_dump()
+        )
+        
+        db.add(nueva_carpeta)
+        db.commit()
+        db.refresh(nueva_carpeta)
+        
+        return nueva_carpeta
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error creando carpeta: {str(e)}")
+
+@app.get("/galeria/carpetas", response_model=List[schemas.CarpetaResponse])
+def obtener_carpetas(
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Obtener todas las carpetas del usuario"""
+    try:
+        carpetas = db.query(models.GaleriaCarpeta).filter(
+            models.GaleriaCarpeta.id_usuario == user_id
+        ).order_by(models.GaleriaCarpeta.fecha_actualizacion.desc()).all()
+        
+        resultado = []
+        for carpeta in carpetas:
+            # Contar archivos en la carpeta
+            total_archivos = db.query(models.GaleriaArchivo).filter(
+                models.GaleriaArchivo.id_carpeta == carpeta.id_carpeta
+            ).count()
+            
+            # Calcular tamaño total y convertir Decimal a int
+            tamano_total_decimal = db.query(func.sum(models.GaleriaArchivo.tamano)).filter(
+                models.GaleriaArchivo.id_carpeta == carpeta.id_carpeta
+            ).scalar()
+            tamano_total = int(tamano_total_decimal) if tamano_total_decimal else 0
+            
+            carpeta_dict = schemas.CarpetaResponse.from_orm(carpeta)
+            carpeta_dict.total_archivos = total_archivos
+            carpeta_dict.tamano_total = tamano_total
+            resultado.append(carpeta_dict)
+        
+        return resultado
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error obteniendo carpetas: {str(e)}")
+@app.put("/galeria/carpetas/{id_carpeta}", response_model=schemas.CarpetaResponse)
+def actualizar_carpeta(
+    id_carpeta: int,
+    carpeta: schemas.CarpetaBase,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Actualizar una carpeta existente"""
+    try:
+        carpeta_db = db.query(models.GaleriaCarpeta).filter(
+            models.GaleriaCarpeta.id_carpeta == id_carpeta,
+            models.GaleriaCarpeta.id_usuario == user_id
+        ).first()
+        
+        if not carpeta_db:
+            raise HTTPException(status_code=404, detail="Carpeta no encontrada")
+        
+        # Verificar si el nuevo nombre ya existe (excepto para esta carpeta)
+        if carpeta.nombre != carpeta_db.nombre:
+            existente = db.query(models.GaleriaCarpeta).filter(
+                models.GaleriaCarpeta.id_usuario == user_id,
+                models.GaleriaCarpeta.nombre == carpeta.nombre,
+                models.GaleriaCarpeta.id_carpeta != id_carpeta
+            ).first()
+            
+            if existente:
+                raise HTTPException(status_code=400, detail="Ya tienes una carpeta con ese nombre")
+        
+        # Actualizar campos
+        for key, value in carpeta.model_dump().items():
+            setattr(carpeta_db, key, value)
+        
+        carpeta_db.fecha_actualizacion = datetime.utcnow()
+        
+        db.commit()
+        db.refresh(carpeta_db)
+        
+        return carpeta_db
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error actualizando carpeta: {str(e)}")
+
+@app.delete("/galeria/carpetas/{id_carpeta}")
+def eliminar_carpeta(
+    id_carpeta: int,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Eliminar una carpeta y todos sus archivos"""
+    try:
+        carpeta = db.query(models.GaleriaCarpeta).filter(
+            models.GaleriaCarpeta.id_carpeta == id_carpeta,
+            models.GaleriaCarpeta.id_usuario == user_id
+        ).first()
+        
+        if not carpeta:
+            raise HTTPException(status_code=404, detail="Carpeta no encontrada")
+        
+        # Obtener todos los archivos de la carpeta
+        archivos = db.query(models.GaleriaArchivo).filter(
+            models.GaleriaArchivo.id_carpeta == id_carpeta
+        ).all()
+        
+        # Eliminar archivos físicos
+        for archivo in archivos:
+            file_path = archivo.ruta.replace("/", "", 1) if archivo.ruta.startswith("/") else archivo.ruta
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            
+            if archivo.miniatura:
+                miniatura_path = archivo.miniatura.replace("/", "", 1) if archivo.miniatura.startswith("/") else archivo.miniatura
+                if os.path.exists(miniatura_path):
+                    os.remove(miniatura_path)
+        
+        # Eliminar carpeta de la base de datos (se eliminarán en cascada los archivos)
+        db.delete(carpeta)
+        db.commit()
+        
+        return {"mensaje": "Carpeta eliminada correctamente"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error eliminando carpeta: {str(e)}")
+
+@app.post("/galeria/archivos/subir")
+async def subir_archivo_galeria(
+    id_carpeta: int = Form(...),
+    archivo: UploadFile = File(...),
+    descripcion: str = Form(None),
+    etiquetas: str = Form(None),
+    es_publico: bool = Form(False),
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Subir un archivo a la galería - VERSIÓN SIMPLIFICADA"""
+    try:
+        # Verificar que la carpeta existe y pertenece al usuario
+        carpeta = db.query(models.GaleriaCarpeta).filter(
+            models.GaleriaCarpeta.id_carpeta == id_carpeta,
+            models.GaleriaCarpeta.id_usuario == user_id
+        ).first()
+        
+        if not carpeta:
+            raise HTTPException(status_code=404, detail="Carpeta no encontrada")
+        
+        # Validar archivo
+        if not archivo.filename:
+            raise HTTPException(status_code=400, detail="Archivo no válido")
+        
+        # Obtener extensión
+        file_extension = archivo.filename.split('.')[-1].lower() if '.' in archivo.filename else ''
+        
+        # Determinar tipo
+        tipo_archivo = determinar_tipo_archivo(file_extension)
+        
+        # Validar tipo permitido
+        if tipo_archivo not in ALLOWED_GALERIA_EXTENSIONS:
+            raise HTTPException(status_code=400, detail="Tipo de archivo no permitido")
+        
+        # Validar tamaño
+        contenido = await archivo.read()
+        tamano = len(contenido)
+        
+        if tamano > MAX_GALERIA_FILE_SIZE:
+            raise HTTPException(status_code=400, detail="Archivo demasiado grande. Máximo 100MB")
+        
+        # Reiniciar posición del archivo
+        await archivo.seek(0)
+        
+        # Generar nombre único
+        unique_filename = f"{user_id}_{uuid.uuid4()}_{archivo.filename.replace(' ', '_')}"
+        
+        # Determinar carpeta de destino
+        if tipo_archivo == "imagen":
+            folder = os.path.join(GALERIA_BASE_DIR, "imagenes")
+        elif tipo_archivo == "video":
+            folder = os.path.join(GALERIA_BASE_DIR, "videos")
+        elif tipo_archivo == "audio":
+            folder = os.path.join(GALERIA_BASE_DIR, "audios")
+        else:
+            folder = os.path.join(GALERIA_BASE_DIR, "documentos")
+        
+        os.makedirs(folder, exist_ok=True)
+        
+        # Ruta completa del archivo
+        file_path = os.path.join(folder, unique_filename)
+        
+        # Guardar archivo
+        with open(file_path, "wb") as f:
+            f.write(contenido)
+        
+        # IMPORTANTE: Usar ruta relativa para el frontend
+        ruta_url = f"/static/galeria/{tipo_archivo}s/{unique_filename}"
+        
+        # Para imágenes y videos, usar la ruta directa como miniatura
+        miniatura_url = ruta_url if tipo_archivo in ["imagen", "video"] else None
+        
+        # Procesar etiquetas
+        lista_etiquetas = []
+        if etiquetas:
+            try:
+                lista_etiquetas = json.loads(etiquetas)
+                if not isinstance(lista_etiquetas, list):
+                    lista_etiquetas = [lista_etiquetas]
+            except:
+                lista_etiquetas = [etiquetas] if etiquetas else []
+        
+        # Crear registro en la base de datos
+        nuevo_archivo = models.GaleriaArchivo(
+            id_carpeta=id_carpeta,
+            id_usuario=user_id,
+            nombre_original=archivo.filename,
+            nombre_archivo=unique_filename,
+            tipo=tipo_archivo,
+            extension=file_extension,
+            tamano=tamano,
+            ruta=ruta_url,  # Usar ruta relativa
+            miniatura=miniatura_url,  # Para imágenes/videos, usar el mismo archivo como miniatura
+            duracion=None,
+            resolucion=None,
+            descripcion=descripcion,
+            etiquetas=json.dumps(lista_etiquetas) if lista_etiquetas else None,
+            es_publico=es_publico
+        )
+        
+        db.add(nuevo_archivo)
+        
+        # Actualizar fecha de modificación de la carpeta
+        carpeta.fecha_actualizacion = datetime.utcnow()
+        
+        db.commit()
+        db.refresh(nuevo_archivo)
+        
+        # Preparar respuesta con URL absoluta para el frontend
+        base_url = "http://localhost:8000"
+        response = schemas.ArchivoResponse.from_orm(nuevo_archivo)
+        response.carpeta_nombre = carpeta.nombre
+        
+        # Asegurar que las URLs sean absolutas
+        if response.ruta and not response.ruta.startswith('http'):
+            response.ruta = f"{base_url}{response.ruta}"
+        
+        if response.miniatura and not response.miniatura.startswith('http'):
+            response.miniatura = f"{base_url}{response.miniatura}"
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"Error subiendo archivo: {str(e)}")  # Para debugging
+        raise HTTPException(status_code=500, detail=f"Error subiendo archivo: {str(e)}")
+    
+@app.get("/galeria/archivos", response_model=List[schemas.ArchivoResponse])
+def obtener_archivos_galeria(
+    id_carpeta: Optional[int] = None,
+    tipo: Optional[str] = None,
+    busqueda: Optional[str] = None,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Obtener archivos de la galería con filtros opcionales"""
+    try:
+        query = db.query(models.GaleriaArchivo).join(
+            models.GaleriaCarpeta,
+            models.GaleriaArchivo.id_carpeta == models.GaleriaCarpeta.id_carpeta
+        ).filter(
+            models.GaleriaArchivo.id_usuario == user_id
+        )
+        
+        # Filtrar por carpeta
+        if id_carpeta:
+            query = query.filter(models.GaleriaArchivo.id_carpeta == id_carpeta)
+        
+        # Filtrar por tipo
+        if tipo:
+            query = query.filter(models.GaleriaArchivo.tipo == tipo)
+        
+        # Filtrar por búsqueda
+        if busqueda:
+            search_term = f"%{busqueda}%"
+            query = query.filter(
+                (models.GaleriaArchivo.nombre_original.ilike(search_term)) |
+                (models.GaleriaArchivo.descripcion.ilike(search_term)) |
+                (models.GaleriaArchivo.etiquetas.ilike(search_term))
+            )
+        
+        archivos = query.order_by(models.GaleriaArchivo.fecha_subida.desc()).all()
+        
+        resultado = []
+        for archivo in archivos:
+            archivo_dict = schemas.ArchivoResponse.from_orm(archivo)
+            archivo_dict.carpeta_nombre = archivo.carpeta.nombre
+            resultado.append(archivo_dict)
+        
+        return resultado
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error obteniendo archivos: {str(e)}")
+
+@app.get("/galeria/archivos/{id_archivo}", response_model=schemas.ArchivoResponse)
+def obtener_archivo_detalle(
+    id_archivo: int,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Obtener detalles de un archivo específico"""
+    try:
+        archivo = db.query(models.GaleriaArchivo).join(
+            models.GaleriaCarpeta,
+            models.GaleriaArchivo.id_carpeta == models.GaleriaCarpeta.id_carpeta
+        ).filter(
+            models.GaleriaArchivo.id_archivo == id_archivo,
+            models.GaleriaArchivo.id_usuario == user_id
+        ).first()
+        
+        if not archivo:
+            raise HTTPException(status_code=404, detail="Archivo no encontrado")
+        
+        archivo_dict = schemas.ArchivoResponse.from_orm(archivo)
+        archivo_dict.carpeta_nombre = archivo.carpeta.nombre
+        
+        return archivo_dict
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error obteniendo archivo: {str(e)}")
+
+@app.put("/galeria/archivos/{id_archivo}", response_model=schemas.ArchivoResponse)
+def actualizar_archivo(
+    id_archivo: int,
+    descripcion: str = Form(None),
+    etiquetas: str = Form(None),
+    es_publico: bool = Form(None),
+    id_carpeta: int = Form(None),
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Actualizar metadatos de un archivo"""
+    try:
+        archivo = db.query(models.GaleriaArchivo).filter(
+            models.GaleriaArchivo.id_archivo == id_archivo,
+            models.GaleriaArchivo.id_usuario == user_id
+        ).first()
+        
+        if not archivo:
+            raise HTTPException(status_code=404, detail="Archivo no encontrado")
+        
+        # Actualizar carpeta si se especifica
+        if id_carpeta is not None:
+            carpeta = db.query(models.GaleriaCarpeta).filter(
+                models.GaleriaCarpeta.id_carpeta == id_carpeta,
+                models.GaleriaCarpeta.id_usuario == user_id
+            ).first()
+            
+            if not carpeta:
+                raise HTTPException(status_code=404, detail="Carpeta no encontrada")
+            
+            archivo.id_carpeta = id_carpeta
+        
+        # Actualizar otros campos
+        if descripcion is not None:
+            archivo.descripcion = descripcion
+        
+        if etiquetas is not None:
+            try:
+                lista_etiquetas = json.loads(etiquetas)
+                archivo.etiquetas = json.dumps(lista_etiquetas) if lista_etiquetas else None
+            except:
+                archivo.etiquetas = etiquetas if etiquetas else None
+        
+        if es_publico is not None:
+            archivo.es_publico = es_publico
+        
+        archivo.fecha_actualizacion = datetime.utcnow()
+        
+        db.commit()
+        db.refresh(archivo)
+        
+        archivo_dict = schemas.ArchivoResponse.from_orm(archivo)
+        archivo_dict.carpeta_nombre = archivo.carpeta.nombre
+        
+        return archivo_dict
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error actualizando archivo: {str(e)}")
+
+@app.delete("/galeria/archivos/{id_archivo}")
+def eliminar_archivo(
+    id_archivo: int,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Eliminar un archivo de la galería"""
+    try:
+        archivo = db.query(models.GaleriaArchivo).filter(
+            models.GaleriaArchivo.id_archivo == id_archivo,
+            models.GaleriaArchivo.id_usuario == user_id
+        ).first()
+        
+        if not archivo:
+            raise HTTPException(status_code=404, detail="Archivo no encontrado")
+        
+        # Eliminar archivo físico
+        file_path = archivo.ruta.replace("/", "", 1) if archivo.ruta.startswith("/") else archivo.ruta
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        
+        # Eliminar miniatura si existe
+        if archivo.miniatura:
+            miniatura_path = archivo.miniatura.replace("/", "", 1) if archivo.miniatura.startswith("/") else archivo.miniatura
+            if os.path.exists(miniatura_path):
+                os.remove(miniatura_path)
+        
+        # Eliminar de la base de datos
+        db.delete(archivo)
+        db.commit()
+        
+        return {"mensaje": "Archivo eliminado correctamente"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error eliminando archivo: {str(e)}")
+
+@app.post("/galeria/publicar")
+def publicar_desde_galeria(
+    publicacion: schemas.PublicarDesdeGaleria,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Publicar un archivo de la galería en la página principal"""
+    try:
+        # Verificar que el archivo existe y pertenece al usuario
+        archivo = db.query(models.GaleriaArchivo).filter(
+            models.GaleriaArchivo.id_archivo == publicacion.id_archivo,
+            models.GaleriaArchivo.id_usuario == user_id
+        ).first()
+        
+        if not archivo:
+            raise HTTPException(status_code=404, detail="Archivo no encontrado")
+        
+        # Crear la publicación
+        nueva_publicacion = models.Publicacion(
+            id_usuario=user_id,
+            contenido=publicacion.contenido or f"Compartiendo {archivo.nombre_original} desde mi galería",
+            imagen=archivo.ruta,
+            tipo_medio=archivo.tipo,
+            etiquetas=json.dumps(publicacion.etiquetas) if publicacion.etiquetas else None
+        )
+        
+        db.add(nueva_publicacion)
+        db.commit()
+        db.refresh(nueva_publicacion)
+        
+        # Registrar en galeria_publicaciones
+        galeria_publicacion = models.GaleriaPublicacion(
+            id_archivo=publicacion.id_archivo,
+            id_publicacion=nueva_publicacion.id_publicacion,
+            id_usuario=user_id
+        )
+        
+        db.add(galeria_publicacion)
+        db.commit()
+        
+        return {
+            "mensaje": "Publicado exitosamente desde la galería",
+            "id_publicacion": nueva_publicacion.id_publicacion
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error publicando desde galería: {str(e)}")
+
+@app.get("/galeria/public/{id_usuario}")
+def obtener_galeria_publica(
+    id_usuario: int,
+    db: Session = Depends(get_db)
+):
+    """Obtener archivos públicos de la galería de un usuario"""
+    try:
+        # Verificar que el usuario existe
+        usuario = db.query(models.Usuario).filter(
+            models.Usuario.id_usuario == id_usuario
+        ).first()
+        
+        if not usuario:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        # Obtener carpetas públicas
+        carpetas_publicas = db.query(models.GaleriaCarpeta).filter(
+            models.GaleriaCarpeta.id_usuario == id_usuario,
+            models.GaleriaCarpeta.es_publica == True
+        ).all()
+        
+        carpetas_data = []
+        for carpeta in carpetas_publicas:
+            # Obtener archivos públicos de esta carpeta
+            archivos_publicos = db.query(models.GaleriaArchivo).filter(
+                models.GaleriaArchivo.id_carpeta == carpeta.id_carpeta,
+                models.GaleriaArchivo.es_publico == True
+            ).all()
+            
+            if archivos_publicos:
+                carpetas_data.append({
+                    "carpeta": {
+                        "id_carpeta": carpeta.id_carpeta,
+                        "nombre": carpeta.nombre,
+                        "descripcion": carpeta.descripcion,
+                        "color": carpeta.color,
+                        "icono": carpeta.icono
+                    },
+                    "archivos": [
+                        {
+                            "id_archivo": archivo.id_archivo,
+                            "nombre_original": archivo.nombre_original,
+                            "descripcion": archivo.descripcion,
+                            "tipo": archivo.tipo,
+                            "extension": archivo.extension,
+                            "ruta": archivo.ruta,
+                            "miniatura": archivo.miniatura,
+                            "duracion": archivo.duracion,
+                            "resolucion": archivo.resolucion,
+                            "fecha_subida": archivo.fecha_subida
+                        }
+                        for archivo in archivos_publicos
+                    ]
+                })
+        
+        # Obtener archivos públicos sueltos (sin carpeta pública)
+        archivos_sueltos = db.query(models.GaleriaArchivo).filter(
+            models.GaleriaArchivo.id_usuario == id_usuario,
+            models.GaleriaArchivo.es_publico == True,
+            ~models.GaleriaArchivo.id_carpeta.in_([c.id_carpeta for c in carpetas_publicas])
+        ).all()
+        
+        return {
+            "usuario": {
+                "id_usuario": usuario.id_usuario,
+                "nombre_usuario": usuario.nombre_usuario,
+                "foto_perfil": usuario.perfil.foto_perfil if usuario.perfil else None
+            },
+            "carpetas_publicas": carpetas_data,
+            "archivos_sueltos": [
+                {
+                    "id_archivo": archivo.id_archivo,
+                    "nombre_original": archivo.nombre_original,
+                    "descripcion": archivo.descripcion,
+                    "tipo": archivo.tipo,
+                    "extension": archivo.extension,
+                    "ruta": archivo.ruta,
+                    "miniatura": archivo.miniatura,
+                    "duracion": archivo.duracion,
+                    "resolucion": archivo.resolucion,
+                    "fecha_subida": archivo.fecha_subida
+                }
+                for archivo in archivos_sueltos
+            ]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error obteniendo galería pública: {str(e)}")
 # ------------------ HOME ------------------
 @app.get("/home")
 def home():

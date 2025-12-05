@@ -1,9 +1,10 @@
 # backend/schemas.py
 from pydantic import BaseModel, EmailStr, validator
 from datetime import date, datetime
-from typing import Optional, List
+from typing import Optional, List, Dict, Union
+from decimal import Decimal
 import json
-
+ 
 # ------------------ PERFIL ------------------
 class PerfilBase(BaseModel):
     descripcion: Optional[str] = None
@@ -310,6 +311,88 @@ class ReporteProblemaResponse(ReporteProblemaBase):
     id_usuario: int
     fecha_reporte: datetime
     estado: str
+
+    class Config:
+        from_attributes = True
+
+# AGREGAR AL FINAL DEL ARCHIVO backend/schemas.py
+
+# ------------------ GALERÍA DE ARTE ------------------
+class CarpetaBase(BaseModel):
+    nombre: str
+    descripcion: Optional[str] = None
+    color: Optional[str] = "#6C63FF"
+    icono: Optional[str] = "folder"
+    es_publica: Optional[bool] = False
+
+class CarpetaCreate(CarpetaBase):
+    pass
+
+class CarpetaResponse(CarpetaBase):
+    id_carpeta: int
+    id_usuario: int
+    fecha_creacion: datetime
+    fecha_actualizacion: datetime
+    total_archivos: int = 0
+    tamano_total: Union[int, float, Decimal] = 0  # Cambia esto a Union
+
+    class Config:
+        from_attributes = True
+
+
+class ArchivoBase(BaseModel):
+    nombre_original: str
+    descripcion: Optional[str] = None
+    etiquetas: Optional[List[str]] = None
+    es_publico: Optional[bool] = False
+
+class ArchivoCreate(ArchivoBase):
+    id_carpeta: int
+    tipo: str
+    extension: str
+    tamano: int
+
+class ArchivoResponse(ArchivoBase):
+    id_archivo: int
+    id_carpeta: int
+    id_usuario: int
+    nombre_archivo: str
+    tipo: str
+    extension: str
+    tamano: int
+    ruta: str
+    miniatura: Optional[str] = None
+    duracion: Optional[int] = None
+    resolucion: Optional[str] = None
+    fecha_subida: datetime
+    fecha_actualizacion: datetime
+    carpeta_nombre: Optional[str] = None
+
+    @validator('etiquetas', pre=True)
+    def parse_etiquetas(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except:
+                return [v] if v else []
+        return v
+
+    class Config:
+        from_attributes = True
+
+
+class PublicarDesdeGaleria(BaseModel):
+    id_archivo: int
+    contenido: Optional[str] = None
+    etiquetas: Optional[List[str]] = None
+
+
+class EstadisticasGaleria(BaseModel):
+    total_carpetas: int
+    total_archivos: int
+    tamano_total: Union[int, float, Decimal]  # Añade Union aquí también
+    tamano_total_mb: float
+    tipos_archivos: Dict[str, int]
 
     class Config:
         from_attributes = True
